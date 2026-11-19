@@ -72,6 +72,12 @@ jobs:
           file dist/macos/x86_64/DSH-Intel.app/Contents/MacOS/laufey.dylib
           test "$(lipo -archs dist/macos/x86_64/DSH-Intel.app/Contents/MacOS/laufey.dylib)" = "x86_64"
 
+      - name: Verify package checksums
+        run: |
+          cd dist/release
+          shasum -a 256 -c DSH-Intel-macos-x86_64.zip.sha256
+          shasum -a 256 -c dsh-mac-intel-service.tar.gz.sha256
+
       - name: Upload unsigned test artifacts
         uses: actions/upload-artifact@v4
         with:
