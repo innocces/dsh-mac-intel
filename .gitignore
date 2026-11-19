@@ -1,0 +1,31 @@
+# Local development and agent metadata
+.vscode/
+.demand/
+
+# Deno / JavaScript
+node_modules/
+deno.lock
+coverage/
+*.tsbuildinfo
+
+# Desktop build output
+dist/
+.desktop-build/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+.secrets/
+*.local
+
+# macOS
+.DS_Store
+Thumbs.db
+
+# Generated plugin bundle (downloaded and integrity-checked during packaging)
+service/plugins/*.tgz
+service/plugins/SHA512SUMS
+
+# Logs
+*.log

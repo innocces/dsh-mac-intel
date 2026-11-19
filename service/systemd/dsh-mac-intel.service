@@ -1,0 +1,18 @@
+[Unit]
+Description=DSH Intel — always-on DeepSeek Harness web service
+Documentation=https://github.com/innocces/dsh-mac-intel
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=DSH_HOME=__DSH_HOME__
+Environment=PATH=__NODE_BIN__:__PNPM_BIN__:/usr/local/bin:/usr/bin:/bin
+ExecStart=__DSH_BIN__ web --host __HOST__ --port __PORT__ --no-open
+Restart=always
+RestartSec=4
+TimeoutStopSec=30
+KillSignal=SIGTERM
+
+[Install]
+WantedBy=default.target

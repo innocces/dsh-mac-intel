@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Format, lint, typecheck, and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: 2.9.7
+
+      - name: Run project checks
+        run: deno task check
+
+      - name: Validate service shell syntax
+        run: |
+          bash -n service/lib.sh
+          bash -n service/install.sh
+          bash -n service/uninstall.sh
+          bash -n service/bin/dsh-mac-intel-service
+
+  macos-intel:
+    name: Build macOS Intel application
+    runs-on: macos-15-intel
+    timeout-minutes: 45
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: 2.9.7
+
+      - name: Run project checks
+        run: deno task check
+
+      - name: Download and verify the default plugin
+        run: deno task prepare:plugin
+
+      - name: Build and package the Intel application
+        run: deno task package:macos:x86_64
+
+      - name: Package the managed service
+        run: deno task package:service
+
+      - name: Inspect the application architecture
+        run: |
+          file dist/macos/x86_64/DSH-Intel.app/Contents/MacOS/laufey
+          file dist/macos/x86_64/DSH-Intel.app/Contents/MacOS/laufey.dylib
+          test "$(lipo -archs dist/macos/x86_64/DSH-Intel.app/Contents/MacOS/laufey.dylib)" = "x86_64"
+
+      - name: Upload unsigned test artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dsh-intel-macos-x86_64-unverified
+          path: |
+            dist/release/DSH-Intel-macos-x86_64.zip
+            dist/release/DSH-Intel-macos-x86_64.zip.sha256
+            dist/release/dsh-mac-intel-service.tar.gz
+            dist/release/dsh-mac-intel-service.tar.gz.sha256
+          if-no-files-found: error
+          retention-days: 7

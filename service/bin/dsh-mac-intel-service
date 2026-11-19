@@ -1,0 +1,158 @@
+#!/usr/bin/env bash
+# Managed service boundary used by the DSH Intel desktop application.
+set -euo pipefail
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+SERVICE_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
+# shellcheck source=../lib.sh
+source "$SCRIPT_ROOT/lib.sh"
+
+status_command() {
+  local installed_harness latest_harness installed_plugin latest_plugin active healthy node_version message
+  installed_harness="$(installed_dsh_version || true)"
+  installed_plugin="$(installed_plugin_version || true)"
+  latest_harness="$(latest_npm_version "$DSH_MI_DSH_PACKAGE" 2>/dev/null || true)"
+  latest_plugin="$(latest_npm_version "$DSH_MI_PLUGIN_PACKAGE" 2>/dev/null || true)"
+  active="$(systemctl --user is-active "$DSH_MI_SERVICE_NAME" 2>/dev/null || true)"
+  healthy="false"
+  message="Service status is available; remote update metadata could be incomplete."
+  if health_check; then
+    healthy="true"
+    message="The managed DSH web service is healthy."
+  elif [[ "$active" != "active" ]]; then
+    message="The managed DSH web service is not running."
+  fi
+  node_version="$("$(node_bin)" --version 2>/dev/null || true)"
+  DSH_STATUS_HOST="$DSH_MI_HOST" DSH_STATUS_PORT="$DSH_MI_PORT" \
+    json_status "$installed_harness" "$latest_harness" "$installed_plugin" "$latest_plugin" \
+      "$active" "$healthy" "$node_version" "$message"
+}
+
+install_harness_version() {
+  local version="$1"
+  local destination="$DSH_MI_VERSIONS_DIR/dsh-$version"
+  mkdir -p "$destination"
+  log "Installing DeepSeek Harness $version into an isolated version directory"
+  NPM_CONFIG_REGISTRY="${NPM_CONFIG_REGISTRY:-https://registry.npmjs.org}" \
+    "$(npm_bin)" install --prefix "$destination" --no-audit --no-fund "$DSH_MI_DSH_PACKAGE@$version"
+  test -x "$destination/node_modules/.bin/dsh" || fail "DSH installation did not create the dsh executable"
+}
+
+switch_harness_link() {
+  local destination="$1"
+  local temporary="$DSH_MI_PREFIX/current-dsh.next"
+  rm -f "$temporary"
+  ln -s "$destination" "$temporary"
+  mv -Tf "$temporary" "$DSH_MI_CURRENT_LINK"
+}
+
+backup_profile() {
+  local timestamp="$1"
+  local backup="$DSH_MI_BACKUPS_DIR/profile-$timestamp.tar.gz"
+  mkdir -p "$DSH_MI_BACKUPS_DIR"
+  if [[ -d "$DSH_MI_HOME/profiles" ]]; then
+    tar -czf "$backup" -C "$DSH_MI_HOME/profiles" .
+  else
+    tar -czf "$backup" --files-from /dev/null
+  fi
+  printf '%s' "$backup"
+}
+
+restore_profile() {
+  local backup="$1"
+  [[ -f "$backup" ]] || return 0
+  rm -rf "$DSH_MI_HOME/profiles"
+  mkdir -p "$DSH_MI_HOME/profiles"
+  tar -xzf "$backup" -C "$DSH_MI_HOME/profiles"
+}
+
+update_harness_command() {
+  local latest current target previous_link timestamp
+  latest="$(latest_npm_version "$DSH_MI_DSH_PACKAGE" || true)"
+  current="$(installed_dsh_version || true)"
+  if [[ -z "$latest" ]]; then
+    fail "Could not read the latest DSH version from npm"
+  fi
+  if [[ "$latest" == "$current" ]]; then
+    log "DeepSeek Harness is already at $current"
+    return 0
+  fi
+  previous_link="$(readlink -f "$DSH_MI_CURRENT_LINK" 2>/dev/null || true)"
+  target="$DSH_MI_VERSIONS_DIR/dsh-$latest"
+  if [[ ! -x "$target/node_modules/.bin/dsh" ]]; then
+    install_harness_version "$latest"
+  fi
+  timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
+  switch_harness_link "$target"
+  if ! restart_service; then
+    log "Harness health check failed; restoring the previous runtime"
+    if [[ -n "$previous_link" ]]; then
+      switch_harness_link "$previous_link"
+      restart_service || true
+    fi
+    fail "DeepSeek Harness update failed and was rolled back"
+  fi
+  log "DeepSeek Harness updated from ${current:-none} to $latest"
+  find "$DSH_MI_VERSIONS_DIR" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' 2>/dev/null \
+    | sort -nr | tail -n +3 | cut -d' ' -f2- | while IFS= read -r old; do rm -rf "$old"; done
+}
+
+update_plugin_command() {
+  local latest current timestamp backup
+  latest="$(latest_npm_version "$DSH_MI_PLUGIN_PACKAGE" || true)"
+  current="$(installed_plugin_version || true)"
+  if [[ -z "$latest" ]]; then
+    fail "Could not read the latest Our Free Model version from npm"
+  fi
+  if [[ "$latest" == "$current" ]]; then
+    log "Our Free Model is already at $current"
+    return 0
+  fi
+  timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
+  backup="$(backup_profile "$timestamp")"
+  log "Updating Our Free Model from ${current:-none} to $latest"
+  (
+    export DSH_HOME="$DSH_MI_HOME"
+    export PATH="$DSH_MI_NODE_DIR/bin:$DSH_MI_TOOLS_DIR/pnpm/node_modules/.bin:$PATH"
+    export NPM_CONFIG_REGISTRY="${NPM_CONFIG_REGISTRY:-https://registry.npmjs.org}"
+    "$(dsh_bin)" plugin --profile web update "$DSH_MI_PLUGIN_PACKAGE@$latest"
+  ) || {
+    restore_profile "$backup"
+    fail "Our Free Model update failed; the previous plugin profile was restored"
+  }
+  if ! restart_service; then
+    restore_profile "$backup"
+    restart_service || true
+    fail "Our Free Model health check failed; the previous plugin profile was restored"
+  fi
+  log "Our Free Model updated from ${current:-none} to $latest"
+}
+
+update_all_command() {
+  update_harness_command
+  update_plugin_command
+}
+
+main() {
+  local command="${1:-status}"
+  case "$command" in
+    status)
+      status_command
+      ;;
+    update-plugin)
+      update_plugin_command
+      ;;
+    update-harness)
+      update_harness_command
+      ;;
+    update-all)
+      update_all_command
+      ;;
+    *)
+      printf 'Usage: %s {status|update-plugin|update-harness|update-all}\n' "$0" >&2
+      exit 2
+      ;;
+  esac
+}
+
+main "$@"

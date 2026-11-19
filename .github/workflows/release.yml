@@ -1,0 +1,174 @@
+name: Release macOS Intel
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing version tag to publish (for example v0.1.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-macos-intel
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build, verify, and publish
+    runs-on: macos-15-intel
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check out the tagged source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Install Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: 2.9.7
+
+      - name: Install BSD patch tools
+        run: brew install bsdiff
+
+      - name: Validate tag and version
+        id: version
+        shell: bash
+        run: |
+          VERSION="$(jq -r '.version' deno.json)"
+          TAG="${GITHUB_REF_NAME}"
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            TAG="${{ github.event.inputs.tag }}"
+          fi
+          if [[ "$TAG" != "v$VERSION" ]]; then
+            echo "Tag $TAG does not match deno.json version $VERSION" >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Run project checks
+        run: deno task check
+
+      - name: Download and verify the default plugin
+        run: deno task prepare:plugin
+
+      - name: Build and package the Intel application
+        run: deno task package:macos:x86_64
+
+      - name: Package the managed service
+        run: deno task package:service
+
+      - name: Verify package checksums
+        run: |
+          cd dist/release
+          shasum -a 256 -c DSH-Intel-macos-x86_64.zip.sha256
+          shasum -a 256 -c dsh-mac-intel-service.tar.gz.sha256
+
+      - name: Create a Deno desktop update patch when a previous release exists
+        id: patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG="${{ steps.version.outputs.tag }}"
+          PREVIOUS_TAG="$(git tag --sort=-v:refname | grep -v -F -x "$TAG" | head -n 1 || true)"
+          if [[ -z "$PREVIOUS_TAG" ]]; then
+            echo "No previous tag is available; publishing the bootstrap installer without a binary patch."
+            echo "created=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          mkdir -p previous-release dist/release/patches
+          if ! gh release download "$PREVIOUS_TAG" \
+            --pattern 'DSH-Intel-macos-x86_64.zip' \
+            --dir previous-release; then
+            echo "The previous release has no Intel application archive; skipping the binary patch."
+            echo "created=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          ditto -x -k previous-release/DSH-Intel-macos-x86_64.zip previous-release/unpacked
+          CURRENT_DYLIB="dist/macos/x86_64/DSH-Intel.app/Contents/MacOS/laufey.dylib"
+          PREVIOUS_DYLIB="$(find previous-release/unpacked -type f -name 'laufey.dylib' | head -n 1)"
+          if [[ -z "$PREVIOUS_DYLIB" || ! -f "$CURRENT_DYLIB" ]]; then
+            echo "Could not locate the desktop runtime in one of the releases."
+            echo "created=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          PREVIOUS_VERSION="${PREVIOUS_TAG#v}"
+          PATCH_NAME="${PREVIOUS_TAG}-to-${TAG}-x86_64.bsdiff"
+          PATCH_PATH="dist/release/$PATCH_NAME"
+          bsdiff "$PREVIOUS_DYLIB" "$CURRENT_DYLIB" "$PATCH_PATH"
+          bspatch "$PREVIOUS_DYLIB" /tmp/dsh-intel-patched.dylib "$PATCH_PATH"
+          cmp "$CURRENT_DYLIB" /tmp/dsh-intel-patched.dylib
+          PATCH_SHA="$(shasum -a 256 "$PATCH_PATH" | awk '{print $1}')"
+          jq -n \
+            --arg version "$VERSION" \
+            --arg previous "$PREVIOUS_VERSION" \
+            --arg name "$PATCH_NAME" \
+            --arg sha256 "$PATCH_SHA" \
+            '{version:$version,patches:{($previous):{name:$name,sha256:$sha256}}}' \
+            > dist/release/latest.json
+          echo "created=true" >> "$GITHUB_OUTPUT"
+          echo "previous=$PREVIOUS_TAG" >> "$GITHUB_OUTPUT"
+          echo "patch_name=$PATCH_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Write the bootstrap update manifest
+        if: steps.patch.outputs.created != 'true'
+        shell: bash
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          jq -n --arg version "$VERSION" '{version:$version,patches:{}}' > dist/release/latest.json
+
+      - name: Publish GitHub Release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.version.outputs.tag }}"
+          VERSION="${{ steps.version.outputs.version }}"
+          ASSETS=(
+            dist/release/DSH-Intel-macos-x86_64.zip
+            dist/release/DSH-Intel-macos-x86_64.zip.sha256
+            dist/release/dsh-mac-intel-service.tar.gz
+            dist/release/dsh-mac-intel-service.tar.gz.sha256
+            dist/release/latest.json
+            LICENSE
+            THIRD_PARTY_NOTICES.md
+          )
+          if [[ "${{ steps.patch.outputs.created }}" == "true" ]]; then
+            ASSETS+=("dist/release/${{ steps.patch.outputs.patch_name }}")
+          fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "${ASSETS[@]}" --clobber
+            gh release edit "$TAG" --title "DSH Intel $VERSION" --notes-file RELEASE_NOTES.md
+          else
+            gh release create "$TAG" "${ASSETS[@]}" \
+              --title "DSH Intel $VERSION" \
+              --notes-file RELEASE_NOTES.md \
+              --verify-tag
+          fi
+
+      - name: Verify the published release
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.version.outputs.tag }}"
+          gh release view "$TAG" --json tagName,url,isDraft,isPrerelease,assets > release.json
+          cat release.json
+          jq -e '(.isDraft == false) and ((.assets | length) >= 6)' release.json >/dev/null
+          URL="$(jq -r '.url' release.json)"
+          [[ "$URL" == https://github.com/*/releases/tag/* ]]
+          curl --fail --location --retry 3 \
+            "https://github.com/innocces/dsh-mac-intel/releases/download/$TAG/latest.json" \
+            --output /tmp/published-latest.json
+          jq -e --arg version "${{ steps.version.outputs.version }}" \
+            '.version == $version' /tmp/published-latest.json >/dev/null

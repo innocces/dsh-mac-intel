@@ -1,0 +1,88 @@
+{
+  "name": "@innocces/dsh-mac-intel",
+  "version": "0.1.0",
+  "exports": "./main.ts",
+  "compilerOptions": {
+    "lib": [
+      "deno.desktop"
+    ],
+    "strict": true
+  },
+  "tasks": {
+    "dev": "deno run --allow-env --allow-net=127.0.0.1 --allow-read --allow-run=ssh,node,deno --allow-write --watch main.ts",
+    "fmt": "deno fmt",
+    "lint": "deno lint",
+    "typecheck": "deno check main.ts src/*.ts scripts/*.ts tests/*.ts",
+    "test": "deno test --allow-env --allow-net=127.0.0.1 --allow-read --allow-write",
+    "check": "deno task fmt:check && deno task lint && deno task typecheck && deno task test",
+    "fmt:check": "deno fmt --check",
+    "screenshot": "deno run --allow-env --allow-net=127.0.0.1 --allow-read --allow-run --allow-write scripts/capture_screenshots.ts",
+    "package:service": "rm -rf dist/service-bundle && mkdir -p dist/service-bundle dist/release && cp -R service/. dist/service-bundle/ && cp LICENSE THIRD_PARTY_NOTICES.md dist/service-bundle/ && tar -czf dist/release/dsh-mac-intel-service.tar.gz -C dist/service-bundle . && shasum -a 256 dist/release/dsh-mac-intel-service.tar.gz > dist/release/dsh-mac-intel-service.tar.gz.sha256",
+    "build:macos:x86_64": "deno task prepare-build && rm -rf dist/macos/x86_64/DSH-Intel.app && deno desktop --include src/ui --include assets --permission-set=app --target x86_64-apple-darwin --icon assets/DSH-Intel.icns --output dist/macos/x86_64/DSH-Intel main.ts && mkdir -p dist/macos/x86_64/DSH-Intel.app/Contents/Resources && cp LICENSE THIRD_PARTY_NOTICES.md README.md dist/macos/x86_64/DSH-Intel.app/Contents/Resources/ && codesign --force --deep --sign - dist/macos/x86_64/DSH-Intel.app",
+    "package:macos:x86_64": "deno task build:macos:x86_64 && mkdir -p dist/release && ditto -c -k --sequesterRsrc --keepParent dist/macos/x86_64/DSH-Intel.app dist/release/DSH-Intel-macos-x86_64.zip && shasum -a 256 dist/release/DSH-Intel-macos-x86_64.zip > dist/release/DSH-Intel-macos-x86_64.zip.sha256",
+    "prepare-build": "deno run --allow-env --allow-read --allow-write scripts/prepare_build.ts",
+    "prepare:plugin": "deno run --allow-net=registry.npmjs.org --allow-read --allow-write scripts/prepare_plugin_bundle.ts",
+    "preview": "deno run --allow-env --allow-net=127.0.0.1 --allow-read --allow-run=ssh,node,deno --allow-write scripts/preview_server.ts"
+  },
+  "permissions": {
+    "app": {
+      "env": [
+        "HOME",
+        "PATH",
+        "SSH_AUTH_SOCK",
+        "DSH_INTEL_*"
+      ],
+      "read": true,
+      "write": true,
+      "run": [
+        "ssh",
+        "node",
+        "deno"
+      ],
+      "net": [
+        "127.0.0.1",
+        "registry.npmjs.org",
+        "api.github.com",
+        "github.com"
+      ],
+      "sys": [
+        "hostname",
+        "osRelease",
+        "systemMemoryInfo"
+      ]
+    }
+  },
+  "desktop": {
+    "app": {
+      "name": "DSH Intel",
+      "identifier": "com.innocces.dsh-mac-intel",
+      "icons": {
+        "macos": "./assets/DSH-Intel.icns"
+      }
+    },
+    "backend": "cef",
+    "release": {
+      "baseUrl": "https://github.com/innocces/dsh-mac-intel/releases/latest/download"
+    },
+    "output": {
+      "macos": "./dist/macos/x86_64/DSH-Intel"
+    }
+  },
+  "exclude": [
+    "dist/",
+    ".github/",
+    "docs/screenshots/"
+  ],
+  "fmt": {
+    "lineWidth": 100,
+    "semiColons": true,
+    "singleQuote": false
+  },
+  "lint": {
+    "rules": {
+      "tags": [
+        "recommended"
+      ]
+    }
+  }
+}

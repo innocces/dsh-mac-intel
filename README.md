@@ -1,0 +1,250 @@
+<div align="center">
+
+# DSH Intel for macOS
+
+**DeepSeek Harness 的 macOS Intel 桌面发行版**
+
+[下载 Intel 安装包](https://github.com/innocces/dsh-mac-intel/releases/latest) ·
+[服务部署](#部署常驻服务) · [更新机制](#更新机制) · [第三方来源与许可证](#第三方来源与许可证) ·
+[免责声明](#免责声明)
+
+</div>
+
+> [!IMPORTANT]
+> DSH Intel 是**非官方兼容发行项目**，与 DeepSeek AI、Ebony-Vinyl 无隶属或背书关系。它解决的是官方
+> DeepSeek Harness 桌面发行物未覆盖 macOS Intel 的问题；DeepSeek Harness 本体仍由上游项目维护。
+
+## 应用截图
+
+### DSH Intel 控制中心
+
+![DSH Intel 控制中心](docs/screenshots/control-center.png)
+
+> 截图由本仓库的真实控制中心界面通过 `deno task screenshot`
+> 生成，展示未连接服务时的初始状态；版本卡片使用项目锁定/查询到的版本，不包含虚构的运行统计。
+
+### Our Free Model 自带更新界面
+
+![Our Free Model 插件升级界面](docs/screenshots/ofm-plugin-update.png)
+
+> 上游插件截图来自
+> [Our Free Model 的验证文档](https://github.com/Ebony-Vinyl/dsh-our-free-model/blob/main/docs/verification/images/desktop-update-available.png)，按其
+> MIT 许可证署名使用。
+
+## 为什么需要 DSH Intel
+
+官方 DeepSeek Harness 的桌面应用当前没有可用的 macOS Intel（`x86_64`）发行包，而 DSH
+的部分原生依赖也无法在 Intel Mac 上直接运行。本项目采用：
+
+1. **官方 Web UI**：不在 Intel Mac 本地执行 DSH 原生运行时；
+2. **Deno Desktop**：桌面端只负责窗口、原生菜单、连接与控制，不要求用户安装 Node.js；
+3. **常驻服务**：在支持 DSH 的 `x86_64 Linux` 服务器上运行官方 `dsh web`；
+4. **安全隧道**：Mac 通过 SSH 本地转发访问服务，服务默认只监听 `127.0.0.1:3080`。
+
+```text
+┌──────────────────────── macOS Intel ────────────────────────┐
+│ DSH Intel.app                                                │
+│ ├─ Deno Desktop / 原生菜单 / 自定义控制中心                   │
+│ ├─ SSH 本地转发（或 HTTPS 反向代理）                         │
+│ └─ Deno.autoUpdate：桌面壳差分更新                            │
+└───────────────────────────┬──────────────────────────────────┘
+                            │ SSH / HTTPS
+┌───────────────────────────▼──────────────────────────────────┐
+│ Linux x86_64 常驻服务                                         │
+│ ├─ Node.js 24.9.0 + pnpm 11.28.5（隔离目录安装）              │
+│ ├─ 官方 @deepseek-ai/dsh web                                 │
+│ ├─ 默认内置 @ebony-vinyl/dsh-our-free-model                  │
+│ └─ 版本目录、健康检查、失败回滚、双组件更新                    │
+└──────────────────────────────────────────────────────────────┘
+```
+
+## 功能
+
+- **默认内置 Our Free Model**：服务安装时优先使用 Release 中经过 SHA-512 校验的插件
+  tarball；首次进入 Harness 即可使用。
+- **插件自动更新**：复用插件自身“下载 → 校验 → 备份 → 替换 → 热重载 →
+  失败回滚”流程；服务更新命令还会备份整个 profile。控制中心可开启定期检查和无人值守更新。
+- **Harness 自动更新**：新版本先安装到独立目录，健康检查通过后再原子切换；失败自动恢复旧运行时。
+- **桌面壳自动更新**：从 GitHub Releases 的 `latest.json` 获取 BSD 差分补丁，校验 SHA-256
+  后在下次启动生效，失败由 Deno 运行时回滚。
+- **原生快捷菜单**：插件管理、Our Free
+  Model、插件升级、插件市场、MCP、技能、定时任务、终端和设置等入口同时进入 macOS 菜单与控制中心。
+- **自定义控制界面**：可增加官方面板、界面文字或任意 `http(s)` URL 快捷方式。
+- **环境检测**：区分必需项与可选项；Mac 端没有 Node.js 也不会阻断使用。
+- **无 Node 桌面端**：发布包内含 Deno 运行时；只有远程 Linux 服务需要 Node.js。
+
+## 下载与安装
+
+### 1. 安装桌面应用
+
+从 [GitHub Releases](https://github.com/innocces/dsh-mac-intel/releases/latest) 下载：
+
+- `DSH-Intel-macos-x86_64.zip`
+- `DSH-Intel-macos-x86_64.zip.sha256`
+
+校验并解压：
+
+```bash
+shasum -a 256 -c DSH-Intel-macos-x86_64.zip.sha256
+ditto -x -k DSH-Intel-macos-x86_64.zip
+mv DSH-Intel.app /Applications/
+```
+
+> 当前公开构建使用临时签名（ad-hoc signature），没有 Apple Developer ID 公证。macOS
+> 可能因此显示安全提示；请先核对 Release 中的
+> SHA-256、源码和第三方来源，再决定是否打开。不要在无法核对来源时绕过系统安全提示。
+
+### 2. 部署常驻服务
+
+服务安装包 `dsh-mac-intel-service.tar.gz` 当前面向 **Linux x86_64**。在服务器上执行：
+
+```bash
+tar -xzf dsh-mac-intel-service.tar.gz
+cd service
+./install.sh
+```
+
+安装脚本会：
+
+1. 下载并校验 Node.js `24.9.0` 的官方 Linux x64 归档；
+2. 在隔离目录安装 pnpm `11.28.5`；
+3. 安装 `@deepseek-ai/dsh` 和默认的 `@ebony-vinyl/dsh-our-free-model`；
+4. 创建 `systemd --user` 常驻服务并监听 `127.0.0.1:3080`；
+5. 尝试执行 `loginctl enable-linger`，使服务在退出登录后继续运行。
+
+手动开启 linger（脚本因权限不足未自动完成时）：
+
+```bash
+sudo loginctl enable-linger "$USER"
+```
+
+查看状态与日志：
+
+```bash
+~/.local/share/dsh-mac-intel/bin/dsh-mac-intel-service status
+systemctl --user status dsh-mac-intel.service
+journalctl --user -u dsh-mac-intel.service -f
+```
+
+### 3. 连接 Mac
+
+打开 DSH Intel，在“连接设置”中选择 **SSH 隧道（推荐）**，填写服务器、用户和 SSH
+端口。服务默认路径为：
+
+```text
+~/.local/share/dsh-mac-intel/bin/dsh-mac-intel-service
+```
+
+保存后点击“连接服务”。也可以选择 HTTPS 直连；如果需要一键更新，仍应保留一个 SSH 管理配置。
+
+> 服务默认只绑定 loopback。不要直接把 `3080`
+> 暴露到公网；公网访问应使用带认证、TLS、速率限制和访问日志的反向代理。
+
+## 更新机制
+
+| 组件                | 检查位置                               | 更新方式                                            | 失败保护                      |
+| ------------------- | -------------------------------------- | --------------------------------------------------- | ----------------------------- |
+| Our Free Model 插件 | 插件设置页、npm registry、服务状态接口 | 插件自带热更新；服务执行 profile 快照后更新         | 自动恢复上一插件/profile 版本 |
+| DeepSeek Harness    | npm registry、服务状态接口             | 安装到 `versions/dsh-<version>`，健康检查后原子切换 | 自动恢复旧版本目录            |
+| DSH Intel 桌面壳    | GitHub Releases `latest.json`          | Deno `autoUpdate` 下载 BSD 差分并校验 SHA-256       | Deno 运行时保留备份并自动回滚 |
+
+首次安装仍需手动下载完整应用；从一个已安装版本开始，后续 Release 会提供上一版本到新版本的差分补丁。
+
+手动执行服务更新：
+
+```bash
+~/.local/share/dsh-mac-intel/bin/dsh-mac-intel-service update-plugin
+~/.local/share/dsh-mac-intel/bin/dsh-mac-intel-service update-harness
+~/.local/share/dsh-mac-intel/bin/dsh-mac-intel-service update-all
+```
+
+## 本地开发
+
+需要 Deno `2.9.7`；不需要在开发机上安装 Node.js。
+
+```bash
+# 检查、测试
+deno task check
+
+# 开发模式
+deno task dev
+
+# 生成真实控制中心截图
+deno task screenshot
+
+# 构建 macOS Intel 应用
+deno task build:macos:x86_64
+
+# 生成应用 ZIP 与服务包
+deno task package:macos:x86_64
+deno task prepare:plugin
+deno task package:service
+```
+
+GitHub Actions 会在 `main` 分支执行检查，在 `v*` 标签上构建、生成更新补丁并发布 GitHub Release。详见
+[`.github/workflows`](.github/workflows)。
+
+## 项目结构
+
+```text
+main.ts                       Deno Desktop 入口
+src/                          桌面应用：配置、SSH、控制中心、更新与菜单
+src/ui/                       自定义控制中心（HTML/CSS/JS）
+service/                      Linux x86_64 常驻服务安装与更新脚本
+assets/                       DSH/OFM 标志、字体与 macOS 图标
+scripts/                      构建、插件校验、预览与截图脚本
+tests/                        配置、安全边界、版本与服务状态测试
+docs/screenshots/             README 使用的真实截图
+```
+
+## 第三方来源与许可证
+
+本项目的主要功能来自以下开源项目；完整说明见 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)。
+
+| 项目                        | 用途                                 | 来源                                              | 许可证             |
+| --------------------------- | ------------------------------------ | ------------------------------------------------- | ------------------ |
+| DeepSeek Harness            | 官方 Harness、Web UI、插件管理       | https://github.com/deepseek-ai/deepseek-harness   | MIT                |
+| Our Free Model              | 默认内置插件、模型/渠道注册表        | https://github.com/Ebony-Vinyl/dsh-our-free-model | MIT                |
+| Deno Runtime / Desktop      | 无 Node 桌面运行时与编译工具         | https://github.com/denoland/deno                  | MIT                |
+| Laufey                      | Deno Desktop 的窗口、菜单与 CEF 后端 | https://github.com/littledivy/laufey              | Apache-2.0         |
+| Chromium Embedded Framework | Laufey 使用的渲染器                  | https://github.com/chromiumembedded/cef           | BSD 风格及上游声明 |
+| Node.js                     | 仅远程服务运行时                     | https://github.com/nodejs/node                    | MIT                |
+| pnpm                        | DSH profile 与插件包管理             | https://github.com/pnpm/pnpm                      | MIT                |
+| Montserrat                  | 控制中心品牌字体                     | https://fonts.google.com/specimen/Montserrat      | SIL OFL 1.1        |
+| models.dev                  | 插件使用的模型元数据                 | https://github.com/anomalyco/models.dev           | MIT                |
+| Magpie                      | 插件可选本地路由引擎                 | https://github.com/yetone/magpie                  | MIT                |
+
+本项目自身代码采用 [MIT License](LICENSE)。第三方组件仍受其各自许可证与声明约束；插件包内的
+channel-pack、Magpie、Go 依赖等完整声明随插件 tarball 一并分发。
+
+## 免责声明
+
+1. **非官方声明**：DSH Intel 不是 DeepSeek AI 或 Ebony-Vinyl
+   的官方产品，不隶属于、不赞助、不背书这些项目，也无权修改其服务政策。
+2. **第三方模型与渠道**：Our Free Model 聚合的“免费”、免费额度、OAuth、API Key
+   和本地模型信息来自第三方。免费状态、配额、模型名称、可用地区和条款可能随时变化；本项目不控制也不保证这些服务。
+3. **账号与凭据**：插件的账号登录、令牌、API Key
+   和渠道凭据由相应服务方处理。请使用独立账号，遵守服务条款，不要在不受信任的电脑或服务器保存敏感凭据。
+4. **隐私与数据流**：使用第三方模型时，提示词、附件、代码或工具上下文可能发送给对应提供商。部署前应审查各渠道的数据政策；DSH
+   Intel 不会额外建立独立的模型代理服务。
+5. **费用与损失**：第三方渠道可能产生费用、限流、封禁或不可用。安装、登录、升级或使用前应自行评估成本和风险。
+6. **安全边界**：本项目默认仅监听 loopback 并使用 SSH
+   隧道；暴露到公网、配置反向代理、保存私钥或启用自动更新属于用户的安全责任。
+7. **软件状态**：当前版本未经过 Apple 公证，桌面壳自身更新清单默认使用 HTTPS + SHA-256
+   完整性校验，尚未强制启用 Ed25519 清单签名。请核对 Release 校验和与源码后再启用无人值守更新。
+8. **无担保**：软件按“现状”提供，不承诺绝对安全、可用、兼容或无错误。上游功能、npm
+   包、模型接口和系统策略变化都可能导致更新失败。
+9. **合规责任**：请遵守所在地关于软件许可、模型使用、数据跨境、账号共享、自动订阅和第三方服务访问的法律法规。
+
+## English overview
+
+DSH Intel is an unofficial macOS Intel desktop distribution for
+[DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness). It uses a Deno Desktop shell,
+an SSH-tunneled always-on DSH web service on Linux x86_64, and bundles
+[Our Free Model](https://github.com/Ebony-Vinyl/dsh-our-free-model) by default. It provides
+separate, rollback-aware update paths for the plugin, the Harness runtime, and the desktop shell.
+
+See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for sources, licenses, and asset attribution.
+This project is not affiliated with or endorsed by DeepSeek AI or Ebony-Vinyl; third-party model
+availability, quotas, privacy, and costs remain the responsibility of their respective providers and
+users.

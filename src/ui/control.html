@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>DSH Intel 控制中心</title>
+    <link rel="stylesheet" href="/control/control.css">
+  </head>
+  <body>
+    <div class="app-shell" id="app-shell">
+      <aside class="sidebar" aria-label="控制中心导航">
+        <div class="brand-lockup">
+          <img class="brand-mark" src="/assets/dsh-mark.svg" alt="DeepSeek Harness 标志">
+          <div>
+            <strong>DSH Intel</strong>
+            <span>macOS control center</span>
+          </div>
+        </div>
+
+        <nav class="side-nav">
+          <a class="nav-item active" href="#overview"><span>01</span>概览</a>
+          <a class="nav-item" href="#shortcuts"><span>02</span>快捷方式</a>
+          <a class="nav-item" href="#updates"><span>03</span>更新中心</a>
+          <a class="nav-item" href="#environment"><span>04</span>环境检测</a>
+          <a class="nav-item" href="#settings"><span>05</span>连接设置</a>
+        </nav>
+
+        <div class="sidebar-foot">
+          <span class="status-dot" id="sidebar-status-dot"></span>
+          <div>
+            <strong id="sidebar-status">正在读取状态</strong>
+            <span>本地控制面 · 127.0.0.1</span>
+          </div>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">DEEPSEEK HARNESS · INTEL EDITION</p>
+            <h1>控制中心</h1>
+          </div>
+          <div class="topbar-actions">
+            <span class="connection-pill" id="connection-pill">
+              <span class="status-dot"></span>
+              <span id="connection-label">未连接</span>
+            </span>
+            <button class="button button-secondary" id="refresh-button"
+              type="button">刷新状态</button>
+            <button class="button button-primary" id="open-harness-button"
+              type="button">打开 Harness</button>
+          </div>
+        </header>
+
+        <div class="notice" id="error-notice" role="alert" hidden>
+          <strong>操作未完成</strong>
+          <span id="error-message"></span>
+        </div>
+
+        <section class="hero-panel section" id="overview">
+          <div class="hero-copy">
+            <span class="section-kicker">OVERVIEW</span>
+            <h2>让官方 Web UI 在 Intel Mac 上继续可用</h2>
+            <p>
+              DSH Intel 使用 Deno Desktop 作为轻量桌面壳，通过 SSH 隧道或 HTTPS 连接常驻的
+              DeepSeek Harness 服务；Our Free Model 插件默认随服务安装。
+            </p>
+            <div class="hero-actions">
+              <button class="button button-primary" id="connect-button"
+                type="button">连接服务</button>
+              <button class="button button-quiet" id="control-button"
+                type="button">显示此窗口</button>
+            </div>
+          </div>
+          <div class="hero-orbit" aria-hidden="true">
+            <img src="/assets/dsh-mark.svg" alt="">
+            <div class="orbit orbit-one"></div>
+            <div class="orbit orbit-two"></div>
+            <span class="orbit-label label-intel">x86_64</span>
+            <span class="orbit-label label-web">WEB</span>
+            <span class="orbit-label label-plugin">PLUGIN</span>
+          </div>
+        </section>
+
+        <section class="metric-grid" aria-label="组件状态">
+          <article class="metric-card">
+            <div class="metric-heading">
+              <span>DeepSeek Harness</span>
+              <span class="state-label" id="harness-state">等待检测</span>
+            </div>
+            <strong id="harness-version">—</strong>
+            <p id="harness-detail">读取常驻服务状态</p>
+          </article>
+          <article class="metric-card plugin-card">
+            <div class="metric-heading">
+              <span>Our Free Model</span>
+              <span class="state-label" id="plugin-state">等待检测</span>
+            </div>
+            <strong id="plugin-version">—</strong>
+            <p id="plugin-detail">默认插件 · @ebony-vinyl/dsh-our-free-model</p>
+          </article>
+          <article class="metric-card">
+            <div class="metric-heading">
+              <span>桌面应用</span>
+              <span class="state-label" id="desktop-state">等待检测</span>
+            </div>
+            <strong id="desktop-version">—</strong>
+            <p id="desktop-detail">Deno Desktop 原生运行时</p>
+          </article>
+        </section>
+
+        <section class="section" id="shortcuts">
+          <div class="section-heading">
+            <div>
+              <span class="section-kicker">SHORTCUTS</span>
+              <h2>直达常用功能</h2>
+            </div>
+            <button class="button button-secondary" id="add-shortcut-button"
+              type="button">添加快捷方式</button>
+          </div>
+          <p class="section-description">
+            快捷方式同时出现在原生 macOS 菜单和控制中心。插件入口优先适配中英文界面，并保留自定义页面的能力。
+          </p>
+          <div class="shortcut-groups" id="shortcut-groups"></div>
+        </section>
+
+        <section class="section" id="updates">
+          <div class="section-heading">
+            <div>
+              <span class="section-kicker">UPDATE CENTER</span>
+              <h2>三个组件，独立更新</h2>
+            </div>
+            <button class="button button-secondary" id="check-updates-button"
+              type="button">检查全部更新</button>
+          </div>
+          <div class="update-grid">
+            <article class="update-card">
+              <div class="update-card-head">
+                <div class="product-mark dsh-mark"><img src="/assets/dsh-mark.svg" alt=""></div>
+                <div>
+                  <strong>DeepSeek Harness</strong>
+                  <span>常驻服务运行时</span>
+                </div>
+              </div>
+              <dl>
+                <div>
+                  <dt>已安装</dt>
+                  <dd id="update-harness-installed">—</dd>
+                </div>
+                <div>
+                  <dt>最新版本</dt>
+                  <dd id="update-harness-latest">—</dd>
+                </div>
+              </dl>
+              <button class="button button-secondary update-button" data-update="harness"
+                type="button">更新 Harness</button>
+            </article>
+
+            <article class="update-card featured-update">
+              <div class="update-card-head">
+                <div class="product-mark ofm-mark"><img src="/assets/ofm-icon.svg" alt=""></div>
+                <div>
+                  <strong>Our Free Model</strong>
+                  <span>默认内置插件</span>
+                </div>
+              </div>
+              <dl>
+                <div>
+                  <dt>已安装</dt>
+                  <dd id="update-plugin-installed">—</dd>
+                </div>
+                <div>
+                  <dt>最新版本</dt>
+                  <dd id="update-plugin-latest">—</dd>
+                </div>
+              </dl>
+              <button class="button button-primary update-button" data-update="plugin"
+                type="button">更新插件</button>
+            </article>
+
+            <article class="update-card">
+              <div class="update-card-head">
+                <div class="product-mark desktop-mark" aria-hidden="true">D</div>
+                <div>
+                  <strong>DSH Intel 桌面壳</strong>
+                  <span>Deno 差分更新</span>
+                </div>
+              </div>
+              <dl>
+                <div>
+                  <dt>当前版本</dt>
+                  <dd id="update-desktop-installed">—</dd>
+                </div>
+                <div>
+                  <dt>更新状态</dt>
+                  <dd id="update-desktop-state">等待检查</dd>
+                </div>
+              </dl>
+              <button class="button button-secondary" id="check-desktop-button"
+                type="button">检查桌面更新</button>
+            </article>
+          </div>
+          <div class="safety-note">
+            <strong>更新安全</strong>
+            <p>
+              服务端更新会先安装到独立版本目录，完成健康检查后才切换；失败时恢复旧版本和插件快照。
+              桌面壳使用 Deno 的 HTTPS + SHA-256 校验；Ed25519 清单签名已预留但当前发布未强制启用。
+            </p>
+          </div>
+        </section>
+
+        <section class="section" id="environment">
+          <div class="section-heading">
+            <div>
+              <span class="section-kicker">ENVIRONMENT</span>
+              <h2>环境检测</h2>
+            </div>
+            <span class="section-meta" id="environment-platform">—</span>
+          </div>
+          <div class="environment-list" id="environment-list"></div>
+          <p class="fine-print">
+            桌面应用不需要用户安装 Node.js。Node.js 仅用于远程 Linux 服务运行官方 DSH；
+            服务安装脚本可将其下载到隔离目录并自动完成版本检测。
+          </p>
+        </section>
+
+        <section class="section" id="settings">
+          <div class="section-heading">
+            <div>
+              <span class="section-kicker">CONNECTION</span>
+              <h2>连接设置</h2>
+            </div>
+            <button class="button button-primary" id="save-settings-button"
+              type="button">保存设置</button>
+          </div>
+
+          <form class="settings-form" id="settings-form">
+            <div class="form-grid">
+              <label>
+                <span>连接方式</span>
+                <select id="transport-select" name="transport">
+                  <option value="https">HTTPS / HTTP 直连</option>
+                  <option value="ssh">SSH 隧道（推荐）</option>
+                </select>
+              </label>
+              <label>
+                <span>配置名称</span>
+                <input id="profile-name" name="name" type="text" autocomplete="off" required>
+              </label>
+              <label class="wide-field https-field">
+                <span>Web 地址</span>
+                <input id="web-url" name="webUrl" type="url" placeholder="https://dsh.example.com">
+              </label>
+              <label class="ssh-field">
+                <span>服务器</span>
+                <input id="ssh-host" name="host" type="text" placeholder="dsh.example.com"
+                  autocomplete="off">
+              </label>
+              <label class="ssh-field">
+                <span>用户</span>
+                <input id="ssh-user" name="user" type="text" placeholder="dsh"
+                  autocomplete="username">
+              </label>
+              <label class="ssh-field">
+                <span>SSH 端口</span>
+                <input id="ssh-port" name="port" type="number" min="1" max="65535" value="22">
+              </label>
+              <label class="ssh-field">
+                <span>身份文件（可选）</span>
+                <input id="ssh-identity" name="identityFile" type="text"
+                  placeholder="~/.ssh/id_ed25519" autocomplete="off">
+              </label>
+              <label class="ssh-field">
+                <span>远程服务端口</span>
+                <input id="remote-port" name="remotePort" type="number" min="1" max="65535"
+                  value="3080">
+              </label>
+              <label class="ssh-field">
+                <span>本地转发端口</span>
+                <input id="local-port" name="localPort" type="number" min="1024" max="65535"
+                  value="3080">
+              </label>
+              <label class="ssh-field wide-field">
+                <span>更新辅助脚本路径</span>
+                <input id="service-path" name="servicePath" type="text"
+                  value="~/.local/share/dsh-mac-intel/bin/dsh-mac-intel-service">
+              </label>
+            </div>
+            <div class="settings-footer">
+              <label class="check-field">
+                <input id="auto-check" type="checkbox">
+                <span>定期检查更新</span>
+              </label>
+              <label class="check-field">
+                <input id="auto-plugin" type="checkbox">
+                <span>自动更新 Our Free Model</span>
+              </label>
+              <label class="check-field">
+                <input id="auto-harness" type="checkbox">
+                <span>自动更新 DeepSeek Harness</span>
+              </label>
+            </div>
+          </form>
+        </section>
+
+        <footer class="page-footer">
+          <p>DSH Intel 是非官方兼容发行项目，不隶属于 DeepSeek AI 或 Ebony-Vinyl。</p>
+          <p>第三方模型、渠道和账号由其各自服务方提供；请自行评估隐私、费用与可用性。</p>
+        </footer>
+      </main>
+    </div>
+
+    <dialog class="shortcut-dialog" id="shortcut-dialog">
+      <form method="dialog" id="shortcut-form">
+        <div class="dialog-heading">
+          <div>
+            <span class="section-kicker">CUSTOM SHORTCUT</span>
+            <h2>添加快捷方式</h2>
+          </div>
+          <button class="dialog-close" value="cancel" aria-label="关闭">×</button>
+        </div>
+        <label>
+          <span>显示名称</span>
+          <input id="shortcut-label" type="text" required maxlength="80">
+        </label>
+        <label>
+          <span>分组</span>
+          <input id="shortcut-group" type="text" value="自定义" maxlength="80">
+        </label>
+        <label>
+          <span>目标类型</span>
+          <select id="shortcut-kind">
+            <option value="panel">官方面板</option>
+            <option value="text">界面文字</option>
+            <option value="url">自定义 URL</option>
+          </select>
+        </label>
+        <label id="shortcut-target-field">
+          <span>目标标识</span>
+          <input id="shortcut-target" type="text" placeholder="plugins">
+        </label>
+        <label id="shortcut-match-field">
+          <span>匹配文字（用逗号分隔）</span>
+          <input id="shortcut-match" type="text" placeholder="插件, Plugins">
+        </label>
+        <label id="shortcut-url-field" hidden>
+          <span>URL</span>
+          <input id="shortcut-url" type="url" placeholder="https://example.com/page">
+        </label>
+        <div class="dialog-actions">
+          <button class="button button-quiet" value="cancel">取消</button>
+          <button class="button button-primary" id="save-shortcut-button"
+            value="default">保存</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+    <script src="/control/control.js" defer></script>
+  </body>
+</html>
