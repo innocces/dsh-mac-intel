@@ -1,9 +1,10 @@
-import { assertNavigationState } from "../assertions.ts";
+import { assertEmbeddedIconArtwork, assertNavigationState } from "../assertions.ts";
 import type { E2ePage } from "../page.ts";
 import { pause } from "../runtime.ts";
 
 /** Verify every numbered navigation step, its scroll destination, and its highlight. */
 export async function verifyNavigationScenario(page: E2ePage): Promise<void> {
+  await assertEmbeddedIconArtwork(page);
   const steps = [
     {
       id: "shortcuts",

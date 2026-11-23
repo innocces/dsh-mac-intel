@@ -809,6 +809,16 @@ select:focus-visible {
   margin-top: auto;
 }
 
+.update-requirement {
+  margin: 14px 0 0;
+  padding: 11px 14px;
+  border: 1px solid color-mix(in srgb, var(--warning) 28%, transparent);
+  border-radius: var(--radius-sm);
+  background: var(--warning-soft);
+  color: var(--warning);
+  font-size: 11px;
+}
+
 .safety-note {
   display: grid;
   grid-template-columns: 110px 1fr;

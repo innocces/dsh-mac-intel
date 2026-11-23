@@ -30,6 +30,8 @@ function bindEvents() {
   byId("save-settings-button").addEventListener("click", () => void saveSettings());
   byId("add-shortcut-button").addEventListener("click", openShortcutDialog);
   byId("transport-select").addEventListener("change", updateTransportFields);
+  byId("ssh-host").addEventListener("input", updateUpdateAvailability);
+  byId("ssh-user").addEventListener("input", updateUpdateAvailability);
 
   for (const button of document.querySelectorAll("[data-update]")) {
     button.addEventListener("click", () => {
@@ -239,10 +241,27 @@ function updateTransportFields() {
   for (const element of document.querySelectorAll(".https-field")) {
     element.hidden = ssh;
   }
+  updateUpdateAvailability();
+}
+
+/** Enable managed updates only when the SSH profile can reach the remote helper. */
+function updateUpdateAvailability() {
+  const config = currentState?.config;
+  const profile = config?.profiles?.find((item) => item.id === config.activeProfileId) ??
+    config?.profiles?.[0];
+  const ready = profile?.transport === "ssh" &&
+    Boolean(profile.ssh?.host?.trim()) &&
+    Boolean(profile.ssh?.user?.trim());
+  for (const button of document.querySelectorAll("[data-update]")) {
+    /** @type {HTMLButtonElement} */ (button).disabled = !ready;
+  }
+  byId("update-requirement").textContent = ready
+    ? "SSH 配置已就绪；更新将通过远程 dsh-mac-intel-service 辅助程序执行。"
+    : "一键更新需要配置 SSH 连接，并在远程服务器安装 dsh-mac-intel-service 辅助程序。";
 }
 
 async function saveSettings() {
-  if (!currentState) return;
+  if (!currentState) return false;
   const config = structuredClone(currentState.config);
   const profile = config.profiles.find((item) => item.id === config.activeProfileId) ??
     config.profiles[0];
@@ -265,13 +284,29 @@ async function saveSettings() {
     currentState.config = result.config;
     populateSettings(currentState);
     showToast("连接设置已保存。");
+    return true;
   } catch (error) {
     showError(error instanceof Error ? error.message : String(error));
+    return false;
   }
 }
 
 async function connectService() {
-  await saveSettings();
+  if (!(await saveSettings())) return;
+  const transport = byId("transport-select").value;
+  const host = byId("ssh-host").value.trim();
+  const user = byId("ssh-user").value.trim();
+  const webUrl = byId("web-url").value.trim();
+  if (transport === "ssh" && (!host || !user)) {
+    showToast("请先在连接设置中填写 SSH 服务器和用户。");
+    byId("ssh-host").focus();
+    return;
+  }
+  if (transport === "https" && !/^https?:\/\//i.test(webUrl)) {
+    showToast("请先在连接设置中填写可访问的 HTTP(S) 地址。");
+    byId("web-url").focus();
+    return;
+  }
   const button = /** @type {HTMLButtonElement} */ (byId("connect-button"));
   button.disabled = true;
   button.textContent = "正在连接…";

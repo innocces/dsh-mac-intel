@@ -15,6 +15,30 @@ command -v iconutil >/dev/null || { echo "iconutil is required to build the icns
 [[ -f "$SOURCE" ]] || { echo "Missing icon source: $SOURCE" >&2; exit 1; }
 [[ -f "$ARTWORK" ]] || { echo "Missing whale-girl artwork: $ARTWORK" >&2; exit 1; }
 
+# Browsers do not load external images from an SVG used as an <img> source.
+# Embed the artwork so the control-center icon renders the character as well as the background.
+python3 - "$SOURCE" "$ARTWORK" <<'PY'
+from pathlib import Path
+import base64
+import re
+import sys
+
+source = Path(sys.argv[1])
+artwork = Path(sys.argv[2])
+svg = source.read_text()
+encoded = base64.b64encode(artwork.read_bytes()).decode("ascii")
+pattern = r'href="(?:DSH-Intel-whale-girl\.png|data:image/png;base64,[^"]+)"'
+updated, replacements = re.subn(
+    pattern,
+    lambda _: f'href="data:image/png;base64,{encoded}"',
+    svg,
+    count=1,
+)
+if replacements != 1:
+    raise SystemExit("Could not embed the whale-girl artwork in the SVG icon")
+source.write_text(updated)
+PY
+
 rm -rf "$ICONSET"
 mkdir -p "$ICONSET"
 qlmanage -t -s 1024 -o "$ICONSET" "$SOURCE" >/dev/null 2>&1

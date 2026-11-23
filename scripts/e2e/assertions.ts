@@ -30,6 +30,38 @@ export async function assertNavigationState(page: E2ePage, sectionId: string): P
   }
 }
 
+/** Assert that the SVG icon embeds its artwork instead of relying on an external image. */
+export async function assertEmbeddedIconArtwork(page: E2ePage): Promise<void> {
+  const embedded = await page.evaluate<boolean>(
+    `fetch('/assets/DSH-Intel-icon.svg').then((response) => response.text()).then((svg) => svg.includes('data:image/png;base64,'))`,
+  );
+  if (!embedded) throw new Error("The control-center SVG icon does not embed its artwork.");
+}
+
+/** Assert that managed updates remain disabled until an SSH profile is configured. */
+export async function assertManagedUpdatesRequireSsh(page: E2ePage): Promise<void> {
+  const state = await page.evaluate<{ disabled: boolean; requirement: string }>(
+    `(() => ({
+      disabled: [...document.querySelectorAll('[data-update]')].every((button) => button.disabled),
+      requirement: document.getElementById('update-requirement')?.textContent ?? '',
+    }))()`,
+  );
+  if (!state.disabled) throw new Error("Managed update buttons should be disabled without SSH.");
+  if (!state.requirement.includes("dsh-mac-intel-service")) {
+    throw new Error("The managed-update requirement is missing.");
+  }
+}
+
+/** Assert that managed updates become available after saving a valid SSH profile. */
+export async function assertManagedUpdatesEnabled(page: E2ePage): Promise<void> {
+  const enabled = await page.evaluate<boolean>(
+    `[...document.querySelectorAll('[data-update]')].every((button) => !button.disabled)`,
+  );
+  if (!enabled) {
+    throw new Error("Managed update buttons should be enabled for a saved SSH profile.");
+  }
+}
+
 /** Assert that a shortcut card with the exact label exists. */
 export async function assertShortcutExists(page: E2ePage, label: string): Promise<void> {
   const exists = await page.evaluate<boolean>(
@@ -54,6 +86,14 @@ export async function removeShortcut(page: E2ePage, label: string): Promise<void
     })()`,
   );
   if (!removed) throw new Error(`Could not remove shortcut ${label}`);
+}
+
+/** Assert that the global error notice remains hidden. */
+export async function assertNoErrorNotice(page: E2ePage): Promise<void> {
+  const visible = await page.evaluate<boolean>(
+    `document.getElementById('error-notice')?.hidden === false`,
+  );
+  if (visible) throw new Error("The control center displayed an unexpected error notice.");
 }
 
 /** Assert that the toast contains the expected completion message. */

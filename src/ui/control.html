@@ -155,7 +155,7 @@
                 </div>
               </dl>
               <button class="button button-secondary update-button" data-update="harness"
-                type="button">更新 Harness</button>
+                type="button" disabled>更新 Harness</button>
             </article>
 
             <article class="update-card featured-update">
@@ -177,7 +177,7 @@
                 </div>
               </dl>
               <button class="button button-primary update-button" data-update="plugin"
-                type="button">更新插件</button>
+                type="button" disabled>更新插件</button>
             </article>
 
             <article class="update-card">
@@ -202,6 +202,9 @@
                 type="button">检查桌面更新</button>
             </article>
           </div>
+          <p class="update-requirement" id="update-requirement">
+            一键更新需要配置 SSH 连接，并在远程服务器安装 dsh-mac-intel-service 辅助程序。
+          </p>
           <div class="safety-note">
             <strong>更新安全</strong>
             <p>
