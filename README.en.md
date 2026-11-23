@@ -168,8 +168,8 @@ server, user, and SSH port. The default service path is:
 ~/.local/share/dsh-mac-intel/bin/dsh-mac-intel-service
 ```
 
-Save the settings and click "Connect to service". Direct HTTPS connections are also supported; keep
-an SSH management configuration if one-click updates are required.
+Save the settings and click "Connect to service". Direct HTTPS connections are also supported.
+One-click updates require an SSH profile with the `dsh-mac-intel-service` helper installed.
 
 > The service binds to the loopback interface by default. Do not expose port `3080` directly to the
 > public internet. Public access should use a reverse proxy with authentication, TLS, rate limiting,

@@ -150,7 +150,8 @@ journalctl --user -u dsh-mac-intel.service -f
 ~/.local/share/dsh-mac-intel/bin/dsh-mac-intel-service
 ```
 
-保存后点击“连接服务”。也可以选择 HTTPS 直连；如果需要一键更新，仍应保留一个 SSH 管理配置。
+保存后点击“连接服务”。也可以选择 HTTPS 直连；一键更新需要配置 SSH 连接，并在远程服务器上安装
+`dsh-mac-intel-service` 辅助程序。
 
 > 服务默认只绑定 loopback。不要直接把 `3080`
 > 暴露到公网；公网访问应使用带认证、TLS、速率限制和访问日志的反向代理。
