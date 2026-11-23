@@ -7,7 +7,7 @@ export async function detectEnvironment(): Promise<EnvironmentReport> {
     ? Deno.desktopVersion
     : Deno.version.deno;
   const nodeVersion = await commandVersion(["node", "--version"]);
-  const sshAvailable = await commandExists("ssh");
+  const sshAvailable = await commandExists("ssh", ["-V"]);
   const platform = `${Deno.build.os} ${Deno.build.arch}`;
   const isMacIntel = Deno.build.os === "darwin" && Deno.build.arch === "x86_64";
 
@@ -70,10 +70,13 @@ export async function commandVersion(command: string[]): Promise<string> {
 }
 
 /** Check whether an executable can be resolved on PATH. */
-export async function commandExists(command: string): Promise<boolean> {
+export async function commandExists(
+  command: string,
+  args: string[] = ["--version"],
+): Promise<boolean> {
   try {
     const output = await new Deno.Command(command, {
-      args: ["--version"],
+      args,
       stdout: "null",
       stderr: "null",
     }).output();

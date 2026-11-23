@@ -27,6 +27,9 @@ Deno.test("default config keeps the built-in plugin shortcuts", () => {
     config.shortcuts.some((shortcut) => shortcut.id === "plugin-update"),
     "plugin update shortcut missing",
   );
+  assertEquals(config.schemaVersion, 2);
+  assertEquals(config.profiles[0].transport, "ssh");
+  assertEquals(config.profiles[0].webUrl, "");
 });
 
 Deno.test("normalization rejects unsafe hosts, URLs, and service paths", () => {
@@ -47,8 +50,33 @@ Deno.test("normalization rejects unsafe hosts, URLs, and service paths", () => {
 
 Deno.test("unknown config fields cannot replace the schema version", () => {
   const config = normalizeConfig({ schemaVersion: 99, activeProfileId: "missing" });
-  assertEquals(config.schemaVersion, 1);
+  assertEquals(config.schemaVersion, 2);
   assertEquals(config.activeProfileId, config.profiles[0].id);
+});
+
+Deno.test("legacy loopback placeholder migrates to the SSH workflow", () => {
+  const config = normalizeConfig({
+    schemaVersion: 1,
+    activeProfileId: "default",
+    profiles: [{
+      id: "default",
+      name: "本机服务",
+      transport: "https",
+      webUrl: "http://127.0.0.1:3080",
+      ssh: {
+        host: "",
+        user: "",
+        port: 22,
+        identityFile: "",
+        remotePort: 3080,
+        localPort: 3080,
+        servicePath: "~/.local/share/dsh-mac-intel/bin/dsh-mac-intel-service",
+      },
+    }],
+  });
+  assertEquals(config.schemaVersion, 2);
+  assertEquals(config.profiles[0].transport, "ssh");
+  assertEquals(config.profiles[0].webUrl, "");
 });
 
 Deno.test("shortcut normalization requires a label and a URL for URL shortcuts", () => {

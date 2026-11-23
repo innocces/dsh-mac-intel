@@ -33,7 +33,7 @@ export class SshClient {
   /** Start a local SSH forward and resolve when the remote web port answers. */
   startTunnel(localPort: number): Promise<Deno.ChildProcess> {
     const args = [
-      ...this.#baseArgs(),
+      ...buildSshBaseArgs(this.#profile),
       "-N",
       "-T",
       "-o",
@@ -59,7 +59,7 @@ export class SshClient {
   }
 
   async #run(command: string[]): Promise<{ success: boolean; stdout: string; stderr: string }> {
-    const args = [...this.#baseArgs(), ...command, this.#target()];
+    const args = buildSshCommandArgs(this.#profile, command);
     try {
       const output = await new Deno.Command("ssh", {
         args,
@@ -79,23 +79,6 @@ export class SshClient {
     }
   }
 
-  #baseArgs(): string[] {
-    const args = [
-      "-p",
-      String(this.#profile.ssh.port),
-      "-o",
-      "BatchMode=yes",
-      "-o",
-      "ConnectTimeout=10",
-      "-o",
-      "StrictHostKeyChecking=accept-new",
-    ];
-    if (this.#profile.ssh.identityFile) {
-      args.push("-i", this.#profile.ssh.identityFile);
-    }
-    return args;
-  }
-
   #target(): string {
     return `${this.#profile.ssh.user}@${this.#profile.ssh.host}`;
   }
@@ -112,6 +95,44 @@ export class SshClient {
       // The process may be killed while the stream is being drained.
     }
   }
+}
+
+/** Build an OpenSSH command with the destination before the remote command. */
+export function buildSshCommandArgs(
+  profile: AppProfile,
+  remoteCommand: string[] = [],
+): string[] {
+  return [
+    ...buildSshBaseArgs(profile),
+    `${profile.ssh.user}@${profile.ssh.host}`,
+    ...remoteCommand,
+  ];
+}
+
+/** Build the shared OpenSSH options for tunnels and managed-service commands. */
+function buildSshBaseArgs(profile: AppProfile): string[] {
+  const args = [
+    "-p",
+    String(profile.ssh.port),
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "ConnectTimeout=10",
+    "-o",
+    "StrictHostKeyChecking=accept-new",
+  ];
+  if (profile.ssh.identityFile) {
+    args.push("-i", expandHomePath(profile.ssh.identityFile));
+  }
+  return args;
+}
+
+/** Expand a local home-relative identity-file path before passing it to OpenSSH. */
+function expandHomePath(path: string): string {
+  if (path !== "~" && !path.startsWith("~/")) return path;
+  const home = Deno.env.get("HOME");
+  if (!home) return path;
+  return path === "~" ? home : `${home}/${path.slice(2)}`;
 }
 
 /** Parse the JSON document emitted by the managed-service status command. */

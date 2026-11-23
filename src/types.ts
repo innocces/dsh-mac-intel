@@ -59,7 +59,7 @@ export interface UpdateSettings {
 
 /** Persisted application configuration. */
 export interface AppConfig {
-  schemaVersion: 1;
+  schemaVersion: 2;
   activeProfileId: string;
   profiles: AppProfile[];
   shortcuts: Shortcut[];

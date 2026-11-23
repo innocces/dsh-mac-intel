@@ -24,6 +24,9 @@ export class ServiceClient {
   /** Read the current service, DSH, and plugin versions. */
   async status(): Promise<ServiceStatus> {
     if (this.#profile.transport === "ssh") {
+      if (!this.#profile.ssh.host || !this.#profile.ssh.user) {
+        throw new Error("请先在连接设置中填写 SSH 服务器和用户。");
+      }
       const result = await new SshClient(this.#profile, this.#logger).service("status");
       if (!result.success || result.status === null) {
         throw new Error(
@@ -68,6 +71,13 @@ export class ServiceClient {
         success: false,
         message:
           "One-click updates require an SSH profile with the dsh-mac-intel-service helper installed.",
+        status: null,
+      };
+    }
+    if (!this.#profile.ssh.host || !this.#profile.ssh.user) {
+      return {
+        success: false,
+        message: "请先在连接设置中填写 SSH 服务器和用户。",
         status: null,
       };
     }

@@ -1,6 +1,6 @@
 import type { AppConfig, AppProfile, Shortcut } from "./types.ts";
 
-const CONFIG_SCHEMA_VERSION = 1 as const;
+const CONFIG_SCHEMA_VERSION = 2 as const;
 
 /** Built-in shortcuts for the most useful official DSH and plugin surfaces. */
 export const DEFAULT_SHORTCUTS: Shortcut[] = [
@@ -91,9 +91,9 @@ export const DEFAULT_SHORTCUTS: Shortcut[] = [
 export function defaultProfile(): AppProfile {
   return {
     id: "default",
-    name: "本机服务",
-    transport: "https",
-    webUrl: "http://127.0.0.1:3080",
+    name: "SSH 服务",
+    transport: "ssh",
+    webUrl: "",
     ssh: {
       host: "",
       user: "",
@@ -129,12 +129,16 @@ export function defaultConfig(): AppConfig {
 export function normalizeConfig(value: unknown): AppConfig {
   const fallback = defaultConfig();
   if (!isRecord(value)) return fallback;
+  const rawSchemaVersion = typeof value.schemaVersion === "number" ? value.schemaVersion : 0;
   const profiles = Array.isArray(value.profiles)
     ? value.profiles.map(normalizeProfile).filter((profile): profile is AppProfile =>
       profile !== null
     )
     : fallback.profiles;
-  const safeProfiles = profiles.length > 0 ? profiles : fallback.profiles;
+  let safeProfiles = profiles.length > 0 ? profiles : fallback.profiles;
+  if (rawSchemaVersion < 2) {
+    safeProfiles = safeProfiles.map(migrateLegacyProfile);
+  }
   const requestedProfileId = typeof value.activeProfileId === "string" ? value.activeProfileId : "";
   const activeProfileId = safeProfiles.some((profile) => profile.id === requestedProfileId)
     ? requestedProfileId
@@ -243,8 +247,24 @@ export function normalizeProfile(value: unknown): AppProfile | null {
     id,
     name: cleanLabel(typeof value.name === "string" ? value.name : id),
     transport,
-    webUrl: webUrl || (transport === "https" ? "http://127.0.0.1:3080" : ""),
+    webUrl,
     ssh,
+  };
+}
+
+/** Move the untouched v1 loopback placeholder to the recommended SSH workflow. */
+function migrateLegacyProfile(profile: AppProfile): AppProfile {
+  const isUntouchedLoopbackPlaceholder = profile.name === "本机服务" &&
+    profile.transport === "https" &&
+    profile.webUrl === "http://127.0.0.1:3080" &&
+    profile.ssh.host === "" &&
+    profile.ssh.user === "";
+  if (!isUntouchedLoopbackPlaceholder) return profile;
+  return {
+    ...profile,
+    name: "SSH 服务",
+    transport: "ssh",
+    webUrl: "",
   };
 }
 

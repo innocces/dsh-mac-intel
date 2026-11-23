@@ -20,7 +20,7 @@ import { fetchComponentVersions } from "./registry.ts";
 export class AppController implements ControlHost {
   readonly #logger: Logger;
   #config: AppConfig = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     activeProfileId: "default",
     profiles: [],
     shortcuts: [],
@@ -354,7 +354,13 @@ export class AppController implements ControlHost {
     try {
       await this.checkUpdates();
       const updates = this.#config.updates;
-      if (updates.autoUpdatePlugin && updates.autoUpdateHarness) {
+      const profile = activeProfile(this.#config);
+      const canUpdate = profile.transport === "ssh" &&
+        profile.ssh.host.length > 0 &&
+        profile.ssh.user.length > 0;
+      if (!canUpdate) {
+        this.#logger.warn("Skipped scheduled service update because no SSH profile is configured.");
+      } else if (updates.autoUpdatePlugin && updates.autoUpdateHarness) {
         await this.update("all");
       } else if (updates.autoUpdatePlugin) {
         await this.update("plugin");
