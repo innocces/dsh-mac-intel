@@ -1,6 +1,7 @@
 # Local development and agent metadata
 .vscode/
 .demand/
+pi-session-*.html
 
 # Deno / JavaScript
 node_modules/
