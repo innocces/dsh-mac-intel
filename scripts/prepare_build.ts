@@ -12,10 +12,16 @@ async function main(): Promise<void> {
 
   const requiredAssets = [
     "assets/DSH-Intel.icns",
+    "assets/DSH-Intel-whale-girl.png",
+    "assets/DSH-Intel-whale-girl.png.base64",
     "assets/dsh-mark.svg",
     "assets/ofm-icon.svg",
     "assets/fonts/montserrat-regular.woff2",
     "assets/fonts/montserrat-medium.woff2",
+    "assets/LICENSE-ARTWORK",
+    "assets/DEEP_WHALE_NOTICE",
+    "README.md",
+    "README.en.md",
   ];
   for (const asset of requiredAssets) {
     const path = join(root, asset);

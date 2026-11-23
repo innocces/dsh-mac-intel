@@ -5,8 +5,10 @@
 **DeepSeek Harness 的 macOS Intel 桌面发行版**
 
 [下载 Intel 安装包](https://github.com/innocces/dsh-mac-intel/releases/latest) ·
-[服务部署](#部署常驻服务) · [更新机制](#更新机制) · [第三方来源与许可证](#第三方来源与许可证) ·
-[免责声明](#免责声明)
+[服务部署](#部署常驻服务) · [使用演示](#使用演示) · [更新机制](#更新机制) ·
+[第三方来源与许可证](#第三方来源与许可证) · [免责声明](#免责声明)
+
+[简体中文](README.md) | [English](README.en.md)
 
 </div>
 
@@ -30,6 +32,19 @@
 > 上游插件截图来自
 > [Our Free Model 的验证文档](https://github.com/Ebony-Vinyl/dsh-our-free-model/blob/main/docs/verification/images/desktop-update-available.png)，按其
 > MIT 许可证署名使用。
+
+## 使用演示
+
+<p align="center">
+  <video controls muted playsinline preload="metadata" poster="docs/screenshots/control-center.png"
+    width="100%">
+    <source src="docs/videos/dsh-intel-control-center.mp4" type="video/mp4" />
+    你的浏览器不支持 HTML5 视频，请<a href="docs/videos/dsh-intel-control-center.mp4">直接下载 MP4</a>。
+  </video>
+</p>
+
+> 视频由本机 `deno task e2e` 使用真实 Chrome 自动操作并录制，覆盖概览、步骤导航高亮、
+> 快捷方式增删、检查更新和保存设置；不包含音频。
 
 ## 为什么需要 DSH Intel
 
@@ -172,6 +187,9 @@ deno task dev
 # 生成真实控制中心截图
 deno task screenshot
 
+# 在真实 Chrome 中执行完整 E2E，并更新截图与演示视频
+deno task e2e
+
 # 构建 macOS Intel 应用
 deno task build:macos:x86_64
 
@@ -192,9 +210,10 @@ src/                          桌面应用：配置、SSH、控制中心、更�
 src/ui/                       自定义控制中心（HTML/CSS/JS）
 service/                      Linux x86_64 常驻服务安装与更新脚本
 assets/                       DSH/OFM 标志、字体与 macOS 图标
-scripts/                      构建、插件校验、预览与截图脚本
+scripts/                      构建、插件校验、预览、截图与真实浏览器 E2E
 tests/                        配置、安全边界、版本与服务状态测试
 docs/screenshots/             README 使用的真实截图
+docs/videos/                  README 使用的真实操作演示视频
 ```
 
 ## 第三方来源与许可证
@@ -213,9 +232,17 @@ docs/screenshots/             README 使用的真实截图
 | Montserrat                  | 控制中心品牌字体                     | https://fonts.google.com/specimen/Montserrat      | SIL OFL 1.1        |
 | models.dev                  | 插件使用的模型元数据                 | https://github.com/anomalyco/models.dev           | MIT                |
 | Magpie                      | 插件可选本地路由引擎                 | https://github.com/yetone/magpie                  | MIT                |
+| DeepSeek 鲸鱼娘美术         | 应用图标、控制中心品牌图与图标派生   | https://github.com/Small-tailqwq/dsh-deep-whale   | CC BY-NC-SA 4.0    |
 
 本项目自身代码采用 [MIT License](LICENSE)。第三方组件仍受其各自许可证与声明约束；插件包内的
 channel-pack、Magpie、Go 依赖等完整声明随插件 tarball 一并分发。
+
+> [!IMPORTANT]
+> 鲸鱼娘美术及其改编图标采用 **CC BY-NC-SA 4.0**，仅允许非商业使用，并要求保留署名链与相同方式共享。
+> MIT 仅适用于项目代码，不适用于 `assets/DSH-Intel-whale-girl.png`、 `assets/DSH-Intel-icon.svg` 和
+> `assets/DSH-Intel.icns`。商业发行必须另行取得授权或替换这些美术素材；
+> 完整署名链、修改说明与许可证见 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) 和
+> [`assets/LICENSE-ARTWORK`](assets/LICENSE-ARTWORK)。
 
 ## 免责声明
 
@@ -235,16 +262,3 @@ channel-pack、Magpie、Go 依赖等完整声明随插件 tarball 一并分发�
 8. **无担保**：软件按“现状”提供，不承诺绝对安全、可用、兼容或无错误。上游功能、npm
    包、模型接口和系统策略变化都可能导致更新失败。
 9. **合规责任**：请遵守所在地关于软件许可、模型使用、数据跨境、账号共享、自动订阅和第三方服务访问的法律法规。
-
-## English overview
-
-DSH Intel is an unofficial macOS Intel desktop distribution for
-[DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness). It uses a Deno Desktop shell,
-an SSH-tunneled always-on DSH web service on Linux x86_64, and bundles
-[Our Free Model](https://github.com/Ebony-Vinyl/dsh-our-free-model) by default. It provides
-separate, rollback-aware update paths for the plugin, the Harness runtime, and the desktop shell.
-
-See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for sources, licenses, and asset attribution.
-This project is not affiliated with or endorsed by DeepSeek AI or Ebony-Vinyl; third-party model
-availability, quotas, privacy, and costs remain the responsibility of their respective providers and
-users.
