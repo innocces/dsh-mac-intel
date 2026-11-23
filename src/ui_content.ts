@@ -1,7 +1,12 @@
 import controlHtml from "./ui/control.html" with { type: "text" };
 import controlCss from "./ui/control.css" with { type: "text" };
 import controlJs from "./ui/control.js" with { type: "text" };
+import navigationJs from "./ui/navigation.js" with { type: "text" };
 import dshMarkSvg from "../assets/dsh-mark.svg" with { type: "text" };
+import dshIntelIconSvg from "../assets/DSH-Intel-icon.svg" with { type: "text" };
+import dshIntelWhaleGirlBase64 from "../assets/DSH-Intel-whale-girl.png.base64" with {
+  type: "text",
+};
 import ofmIconSvg from "../assets/ofm-icon.svg" with { type: "text" };
 import montserratRegularBase64 from "../assets/fonts/montserrat-regular.woff2.base64" with {
   type: "text",
@@ -41,6 +46,11 @@ export const UI_ASSETS: Record<string, EmbeddedAsset> = {
     type: "text/javascript; charset=utf-8",
     content: controlJs,
   },
+  "/control/navigation.js": {
+    path: "/control/navigation.js",
+    type: "text/javascript; charset=utf-8",
+    content: navigationJs,
+  },
   "/assets/dsh-mark.svg": {
     path: "/assets/dsh-mark.svg",
     type: "image/svg+xml",
@@ -50,6 +60,16 @@ export const UI_ASSETS: Record<string, EmbeddedAsset> = {
     path: "/assets/ofm-icon.svg",
     type: "image/svg+xml",
     content: ofmIconSvg,
+  },
+  "/assets/DSH-Intel-icon.svg": {
+    path: "/assets/DSH-Intel-icon.svg",
+    type: "image/svg+xml",
+    content: dshIntelIconSvg,
+  },
+  "/assets/DSH-Intel-whale-girl.png": {
+    path: "/assets/DSH-Intel-whale-girl.png",
+    type: "image/png",
+    content: decodeBase64(dshIntelWhaleGirlBase64),
   },
   "/assets/fonts/montserrat-regular.woff2": {
     path: "/assets/fonts/montserrat-regular.woff2",

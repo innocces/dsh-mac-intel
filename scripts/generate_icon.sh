@@ -1,30 +1,19 @@
 #!/usr/bin/env bash
-# Generate the macOS .icns asset from the upstream DeepSeek Harness mark.
+# Generate the macOS .icns asset from the CC BY-NC-SA 4.0 DeepSeek whale-girl artwork.
 set -euo pipefail
 
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 ASSETS="$ROOT/assets"
 SOURCE="$ASSETS/DSH-Intel-icon.svg"
+ARTWORK="$ASSETS/DSH-Intel-whale-girl.png"
 ICONSET="$ROOT/.desktop-build/DSH-Intel.iconset"
 OUTPUT="$ASSETS/DSH-Intel.icns"
 
 command -v qlmanage >/dev/null || { echo "qlmanage is required to render the icon" >&2; exit 1; }
 command -v sips >/dev/null || { echo "sips is required to render the icon" >&2; exit 1; }
 command -v iconutil >/dev/null || { echo "iconutil is required to build the icns file" >&2; exit 1; }
-
-python3 - "$ASSETS/dsh-mark.svg" "$SOURCE" <<'PY'
-from pathlib import Path
-import sys
-source = Path(sys.argv[1]).read_text()
-source = source.replace('fill="#000"', 'fill="#ffffff"')
-source = source.replace('width="50.000000" height="50.000000"', 'width="1024" height="1024"')
-source = source.replace(
-    'fill="none">',
-    'fill="none"><rect x="1" y="1" width="48" height="48" rx="11" fill="#4176e6"/>',
-    1,
-)
-Path(sys.argv[2]).write_text(source)
-PY
+[[ -f "$SOURCE" ]] || { echo "Missing icon source: $SOURCE" >&2; exit 1; }
+[[ -f "$ARTWORK" ]] || { echo "Missing whale-girl artwork: $ARTWORK" >&2; exit 1; }
 
 rm -rf "$ICONSET"
 mkdir -p "$ICONSET"

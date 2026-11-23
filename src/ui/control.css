@@ -135,15 +135,10 @@ select:focus-visible {
 }
 
 .brand-mark {
-  width: 34px;
-  height: 34px;
-  filter: none;
-}
-
-@media (prefers-color-scheme: dark) {
-  .brand-mark {
-    filter: invert(1);
-  }
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  filter: drop-shadow(0 5px 10px rgba(31, 48, 110, 0.22));
 }
 
 .brand-lockup strong,
@@ -171,6 +166,7 @@ select:focus-visible {
 }
 
 .nav-item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -179,7 +175,8 @@ select:focus-visible {
   border-radius: var(--radius-sm);
   color: var(--text-muted);
   text-decoration: none;
-  transition: background 150ms ease, color 150ms ease, transform 150ms ease;
+  transition: background 150ms ease, color 150ms ease, transform 150ms ease,
+    box-shadow 150ms ease;
 }
 
 .nav-item span {
@@ -198,12 +195,20 @@ select:focus-visible {
 
 .nav-item.active {
   background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--accent);
   color: var(--accent-strong);
   font-weight: 600;
 }
 
 .nav-item.active span {
-  color: var(--accent);
+  display: grid;
+  width: 26px;
+  height: 22px;
+  place-items: center;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #ffffff;
+  box-shadow: 0 4px 10px color-mix(in srgb, var(--accent) 24%, transparent);
 }
 
 .sidebar-foot {
@@ -261,7 +266,8 @@ select:focus-visible {
   width: calc(100% - var(--sidebar-width));
   max-width: 1460px;
   margin-left: var(--sidebar-width);
-  padding: 38px clamp(28px, 4vw, 68px) 40px;
+  /* The tail keeps the final step reachable at the top of the viewport. */
+  padding: 38px clamp(28px, 4vw, 68px) max(40px, 58vh);
 }
 
 .topbar {
@@ -394,6 +400,7 @@ select:focus-visible {
 
 .section {
   margin-top: 22px;
+  scroll-margin-top: 28px;
   padding: 30px;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
