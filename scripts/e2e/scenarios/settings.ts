@@ -1,4 +1,5 @@
 import {
+  assertLocalServiceConnection,
   assertManagedUpdatesEnabled,
   assertNoErrorNotice,
   assertOfficialConnectionDefaults,
@@ -10,7 +11,17 @@ import { pause } from "../runtime.ts";
 /** Verify saving connection settings and automatic-update preferences. */
 export async function verifySettingsScenario(page: E2ePage): Promise<void> {
   await page.click(".side-nav a[href='#settings']");
-  await page.setCaption("08 · 官方标准配置与自动更新策略");
+  await page.setCaption("08 · 本机服务、官方标准配置与更新策略");
+  await page.click("#start-local-service-button");
+  await page.waitFor(
+    "document.getElementById('toast').textContent.includes('已模拟启动本机服务')",
+    "本机服务启动后自动填入连接",
+  );
+  await page.waitFor(
+    "document.getElementById('transport-select').value === 'https'",
+    "本机服务连接配置已刷新",
+  );
+  await assertLocalServiceConnection(page);
   await page.click("#apply-standard-config-button");
   await assertOfficialConnectionDefaults(page);
   await page.setInput("#profile-name", "DSH Intel E2E");

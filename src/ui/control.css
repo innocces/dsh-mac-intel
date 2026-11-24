@@ -904,6 +904,51 @@ select:focus-visible {
   font-size: 10px;
 }
 
+.local-service-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-top: 22px;
+  padding: 18px 20px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--surface), var(--surface-subtle));
+}
+
+.local-service-copy {
+  min-width: 0;
+}
+
+.local-service-copy h3 {
+  margin: 5px 0 7px;
+  font-family: "Montserrat", sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.local-service-copy p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.local-service-copy .local-service-footnote {
+  margin-top: 5px;
+  color: var(--text-faint);
+  font-size: 10px;
+}
+
+.local-service-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 .settings-form {
   margin-top: 22px;
 }
@@ -1172,6 +1217,17 @@ select:focus-visible {
   .topbar-actions,
   .section-actions {
     width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .local-service-panel {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .local-service-actions {
+    width: 100%;
+    justify-content: flex-start;
     flex-wrap: wrap;
   }
 

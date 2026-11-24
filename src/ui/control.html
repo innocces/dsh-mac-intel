@@ -243,6 +243,25 @@
             </div>
           </div>
 
+          <div class="local-service-panel" id="local-service-panel">
+            <div class="local-service-copy">
+              <span class="section-kicker">LOCAL SERVICE</span>
+              <h3>在本机启动 DSH 常驻服务</h3>
+              <p id="local-service-detail">尚未安装本机服务。</p>
+              <p class="local-service-footnote">
+                首次启动会下载并校验隔离的 Node.js 24.9.0，安装官方 DSH 与默认插件，
+                再通过 macOS LaunchAgent 仅监听 127.0.0.1:3080。
+              </p>
+            </div>
+            <div class="local-service-actions">
+              <span class="state-label warning" id="local-service-status">未安装</span>
+              <button class="button button-secondary" id="start-local-service-button"
+                type="button">启动并填入连接</button>
+              <button class="button button-quiet" id="stop-local-service-button" type="button"
+                hidden>停止本机服务</button>
+            </div>
+          </div>
+
           <form class="settings-form" id="settings-form">
             <div class="form-grid">
               <label>

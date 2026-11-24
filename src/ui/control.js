@@ -36,6 +36,8 @@ function bindEvents() {
   byId("check-desktop-button").addEventListener("click", () => void checkUpdates());
   byId("connect-button").addEventListener("click", () => void connectService());
   byId("open-harness-button").addEventListener("click", () => void openHarness());
+  byId("start-local-service-button").addEventListener("click", () => void startLocalService());
+  byId("stop-local-service-button").addEventListener("click", () => void stopLocalService());
   byId("control-button").addEventListener("click", () => void post("/api/open/control"));
   byId("save-settings-button").addEventListener("click", () => void saveSettings());
   byId("apply-standard-config-button").addEventListener("click", applyStandardConfig);
@@ -75,6 +77,7 @@ async function refreshState() {
 function render(state) {
   renderConnection(state);
   renderVersions(state);
+  renderLocalService(state.localService);
   renderShortcuts(state);
   renderEnvironment(state);
   populateSettings(state);
@@ -132,6 +135,23 @@ function renderVersions(state) {
   byId("update-desktop-state").textContent = state.appUpdate?.stagedVersion
     ? `${state.appUpdate.stagedVersion} · 待重启`
     : state.appUpdate?.message ?? "等待检查";
+}
+
+function renderLocalService(localService) {
+  if (!localService) return;
+  const running = Boolean(localService.running);
+  const installed = Boolean(localService.installed);
+  byId("local-service-detail").textContent = localService.message ||
+    (running ? "本机 DSH Web 正在运行。" : "尚未安装本机服务。");
+  setStateLabel(
+    "local-service-status",
+    running ? "运行中" : installed ? "已安装" : localService.status === "error" ? "异常" : "未安装",
+    running ? "ok" : installed || localService.status === "error" ? "warning" : "warning",
+  );
+  const startButton = /** @type {HTMLButtonElement} */ (byId("start-local-service-button"));
+  const stopButton = /** @type {HTMLButtonElement} */ (byId("stop-local-service-button"));
+  startButton.hidden = running;
+  stopButton.hidden = !running;
 }
 
 function renderShortcuts(state) {
@@ -359,6 +379,38 @@ async function openHarness() {
     showToast(result.message);
   } catch (error) {
     showError(error instanceof Error ? error.message : String(error));
+  }
+}
+
+async function startLocalService() {
+  const button = /** @type {HTMLButtonElement} */ (byId("start-local-service-button"));
+  button.disabled = true;
+  button.textContent = "正在安装并启动…";
+  try {
+    const result = await post("/api/local-service/start");
+    if (!result.success) throw new Error(result.message);
+    showToast(result.message);
+    await refreshState();
+  } catch (error) {
+    showError(error instanceof Error ? error.message : String(error));
+  } finally {
+    button.disabled = false;
+    button.textContent = "启动并填入连接";
+  }
+}
+
+async function stopLocalService() {
+  const button = /** @type {HTMLButtonElement} */ (byId("stop-local-service-button"));
+  button.disabled = true;
+  try {
+    const result = await post("/api/local-service/stop");
+    if (!result.success) throw new Error(result.message);
+    showToast(result.message);
+    await refreshState();
+  } catch (error) {
+    showError(error instanceof Error ? error.message : String(error));
+  } finally {
+    button.disabled = false;
   }
 }
 

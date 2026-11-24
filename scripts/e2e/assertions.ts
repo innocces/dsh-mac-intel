@@ -52,6 +52,24 @@ export async function assertManagedUpdatesRequireSsh(page: E2ePage): Promise<voi
   }
 }
 
+/** Assert that starting the local service selects and fills the local web endpoint. */
+export async function assertLocalServiceConnection(page: E2ePage): Promise<void> {
+  const values = await page.evaluate<Record<string, string>>(`(() => ({
+    transport: document.getElementById('transport-select').value,
+    webUrl: document.getElementById('web-url').value,
+    profileName: document.getElementById('profile-name').value,
+  }))()`);
+  if (values.transport !== "https") {
+    throw new Error(`Local service should select direct HTTP mode, got ${values.transport}.`);
+  }
+  if (values.webUrl !== "http://127.0.0.1:3080") {
+    throw new Error(`Local service should fill the official web URL, got ${values.webUrl}.`);
+  }
+  if (values.profileName !== "本机服务") {
+    throw new Error(`Local service should rename the profile, got ${values.profileName}.`);
+  }
+}
+
 /** Assert that the official DSH and OpenSSH defaults are present in the form. */
 export async function assertOfficialConnectionDefaults(page: E2ePage): Promise<void> {
   const values = await page.evaluate<Record<string, string>>(`(() => {

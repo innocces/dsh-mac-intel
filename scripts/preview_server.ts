@@ -8,6 +8,7 @@ import {
   type ControlState,
   DSH_BOOTSTRAP_VERSION,
   type EnvironmentReport,
+  type LocalServiceState,
   OFM_BOOTSTRAP_VERSION,
   type ServiceStatus,
 } from "../src/types.ts";
@@ -76,10 +77,19 @@ class PreviewHost implements ControlHost {
       stagedVersion: "",
       message: "等待检查 GitHub Releases 更新",
     };
+    const localService: LocalServiceState = {
+      status: "not-installed",
+      installed: false,
+      running: false,
+      version: "",
+      url: "http://127.0.0.1:3080",
+      message: "预览模式：尚未安装本机服务。",
+    };
     return Promise.resolve({
       config: this.#config,
       environment,
       service,
+      localService,
       appUpdate,
       connected: false,
       lastError: "",
@@ -97,6 +107,21 @@ class PreviewHost implements ControlHost {
 
   openHarness(): Promise<{ connected: boolean; message: string }> {
     return Promise.resolve({ connected: false, message: "预览模式不打开远程 Harness。" });
+  }
+
+  startLocalService(): Promise<{ success: boolean; message: string }> {
+    const profile = this.#config.profiles[0];
+    profile.name = "本机服务";
+    profile.transport = "https";
+    profile.webUrl = "http://127.0.0.1:3080";
+    return Promise.resolve({
+      success: true,
+      message: "预览模式：已模拟启动本机服务并填写连接地址。",
+    });
+  }
+
+  stopLocalService(): Promise<{ success: boolean; message: string }> {
+    return Promise.resolve({ success: true, message: "预览模式：已模拟停止本机服务。" });
   }
 
   update(): Promise<{ success: boolean; message: string }> {
