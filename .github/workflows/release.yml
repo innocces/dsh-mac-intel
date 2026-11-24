@@ -2,6 +2,8 @@ name: Release macOS Intel
 
 on:
   push:
+    branches:
+      - main
     tags:
       - "v*"
   workflow_dispatch:
@@ -15,21 +17,27 @@ permissions:
   contents: write
 
 concurrency:
-  group: release-macos-intel
-  cancel-in-progress: false
+  group: release-macos-intel-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   release:
     name: Build, verify, and publish
+    if: >-
+      ${{
+        github.event_name != 'push' ||
+        github.ref_type != 'branch' ||
+        !contains(github.event.head_commit.message, '[skip ci]')
+      }}
     runs-on: macos-15-intel
     timeout-minutes: 60
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Check out the tagged source
+      - name: Check out the release source
         uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          persist-credentials: true
           fetch-depth: 0
           ref: ${{ github.event.inputs.tag || github.ref }}
 
@@ -41,6 +49,72 @@ jobs:
       - name: Install BSD patch tools
         run: brew install bsdiff
 
+      - name: Prepare the next patch release
+        id: prepare
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git reset --hard origin/main
+
+          CURRENT_VERSION="$(jq -r '.version' deno.json)"
+          PREVIOUS_TAG="$(git tag --list 'v[0-9]*' --sort=-v:refname \
+            | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1 || true)"
+          PREVIOUS_VERSION="${PREVIOUS_TAG#v}"
+          BASE_VERSION="$(python3 - "$CURRENT_VERSION" "$PREVIOUS_VERSION" <<'PY'
+          import sys
+
+          def parse(value):
+              try:
+                  major, minor, patch = value.split(".")
+                  return int(major), int(minor), int(patch)
+              except (TypeError, ValueError):
+                  return (0, 0, 0)
+
+          current = parse(sys.argv[1])
+          previous = parse(sys.argv[2])
+          print("%d.%d.%d" % max(current, previous))
+          PY
+          )"
+          NEXT_VERSION="$BASE_VERSION"
+          while git show-ref --verify --quiet "refs/tags/v${NEXT_VERSION}"; do
+            NEXT_VERSION="$(python3 - "$NEXT_VERSION" <<'PY'
+          import sys
+
+          major, minor, patch = (int(part) for part in sys.argv[1].split("."))
+          print(f"{major}.{minor}.{patch + 1}")
+          PY
+          )"
+          done
+
+          python3 - "$NEXT_VERSION" <<'PY'
+          import json
+          import pathlib
+          import sys
+
+          path = pathlib.Path("deno.json")
+          data = json.loads(path.read_text())
+          data["version"] = sys.argv[1]
+          path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
+          PY
+          VERSION_COMMITTED=false
+          if ! git diff --quiet -- deno.json; then
+            git add deno.json
+            git commit -m "chore(release): prepare v${NEXT_VERSION} [skip ci]"
+            VERSION_COMMITTED=true
+          fi
+          git fetch origin main
+          git rebase origin/main
+          if [[ "$VERSION_COMMITTED" == "true" ]]; then
+            git push origin HEAD:main
+          fi
+          echo "version=$NEXT_VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v${NEXT_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
       - name: Validate tag and version
         id: version
         shell: bash
@@ -49,6 +123,8 @@ jobs:
           TAG="${GITHUB_REF_NAME}"
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             TAG="${{ github.event.inputs.tag }}"
+          elif [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
+            TAG="${{ steps.prepare.outputs.tag }}"
           fi
           if [[ "$TAG" != "v$VERSION" ]]; then
             echo "Tag $TAG does not match deno.json version $VERSION" >&2
@@ -151,10 +227,17 @@ jobs:
             gh release upload "$TAG" "${ASSETS[@]}" --clobber
             gh release edit "$TAG" --title "DSH Intel $VERSION" --notes-file RELEASE_NOTES.md
           else
-            gh release create "$TAG" "${ASSETS[@]}" \
-              --title "DSH Intel $VERSION" \
-              --notes-file RELEASE_NOTES.md \
-              --verify-tag
+            if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
+              gh release create "$TAG" "${ASSETS[@]}" \
+                --title "DSH Intel $VERSION" \
+                --notes-file RELEASE_NOTES.md \
+                --target "${{ steps.prepare.outputs.sha }}"
+            else
+              gh release create "$TAG" "${ASSETS[@]}" \
+                --title "DSH Intel $VERSION" \
+                --notes-file RELEASE_NOTES.md \
+                --verify-tag
+            fi
           fi
 
       - name: Verify the published release
