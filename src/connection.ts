@@ -56,8 +56,10 @@ export class DshConnection {
   }
 
   async #assertReachable(url: string): Promise<void> {
-    const reachable = await waitForHttp(url, 4_000);
-    if (!reachable) throw new Error(`DSH web endpoint is not reachable: ${url}`);
+    const reachable = await waitForHttp(url, 12_000);
+    if (!reachable) {
+      throw new Error(`DSH web endpoint is not reachable: ${redactAuthenticationToken(url)}`);
+    }
   }
 }
 

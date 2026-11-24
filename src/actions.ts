@@ -1,13 +1,13 @@
 import type { Shortcut } from "./types.ts";
 
-/** Result of trying to activate a shortcut in the official web interface. */
+/** Result of trying to activate a shortcut in the current application window. */
 export interface ShortcutResult {
   success: boolean;
   message: string;
 }
 
 /**
- * Activate a shortcut in the DSH web application.
+ * Activate a shortcut in the current application window.
  *
  * The official web interface does not expose a stable public URL scheme for
  * every panel. Text and semantic selectors therefore complement the small

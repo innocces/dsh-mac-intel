@@ -79,7 +79,7 @@ export function buildApplicationMenu(config: AppConfig): Deno.MenuItem[] {
         items: [
           {
             item: {
-              label: "打开 DeepSeek Harness",
+              label: "在当前窗口打开 DeepSeek Harness",
               id: MENU_IDS.openHarness,
               accelerator: "Cmd+O",
               enabled: true,
@@ -87,7 +87,7 @@ export function buildApplicationMenu(config: AppConfig): Deno.MenuItem[] {
           },
           {
             item: {
-              label: "打开控制中心",
+              label: "显示控制中心",
               id: MENU_IDS.openControlCenter,
               accelerator: "Cmd+Shift+C",
               enabled: true,

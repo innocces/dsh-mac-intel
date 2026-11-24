@@ -9,7 +9,7 @@ import type {
 import { Logger } from "./logger.ts";
 import { activeProfile, loadConfig, saveConfig } from "./config.ts";
 import { detectEnvironment } from "./environment.ts";
-import { DshConnection } from "./connection.ts";
+import { delay, DshConnection, redactAuthenticationToken } from "./connection.ts";
 import { ServiceClient } from "./service-client.ts";
 import { ControlServer } from "./control-server.ts";
 import type { ControlHost } from "./control-host.ts";
@@ -17,8 +17,9 @@ import { buildApplicationMenu, MENU_IDS } from "./menu.ts";
 import { activateShortcut } from "./actions.ts";
 import { fetchComponentVersions } from "./registry.ts";
 import { LocalServiceManager } from "./local-service.ts";
+import { shouldSyncLocalServiceUrl } from "./local-service-profile.ts";
 
-/** Coordinates the desktop windows, managed connection, and update surfaces. */
+/** Coordinates the desktop window, managed connection, and update surfaces. */
 export class AppController implements ControlHost {
   readonly #logger: Logger;
   readonly #localService: LocalServiceManager;
@@ -40,7 +41,7 @@ export class AppController implements ControlHost {
   #controlServer: ControlServer | null = null;
   #controlOrigin = "";
   #mainWindow: Deno.BrowserWindow | null = null;
-  #controlWindow: Deno.BrowserWindow | null = null;
+  #currentView: "control" | "harness" = "control";
   #connected = false;
   #lastError = "";
   #appUpdate: AppUpdateState = {
@@ -57,7 +58,7 @@ export class AppController implements ControlHost {
     this.#localService = new LocalServiceManager(logger);
   }
 
-  /** Start the local control center and the desktop windows. */
+  /** Start the local control center and the single desktop window. */
   async start(): Promise<void> {
     this.#config = await loadConfig();
     const localService = await this.#localService.getState();
@@ -71,13 +72,11 @@ export class AppController implements ControlHost {
     this.#logger.info(`DSH Intel ${this.#appUpdate.currentVersion} started`);
 
     if (this.#isProfileConfigured(activeProfile(this.#config))) {
-      await this.connect().catch((error: unknown) => {
-        this.#lastError = error instanceof Error ? error.message : String(error);
-        this.#logger.warn(`Initial connection failed: ${this.#lastError}`);
-      });
+      const result = await this.connect();
+      if (result.connected) await this.#showHarness();
     } else {
       this.#mainWindow?.navigate(`${this.#controlOrigin}/control/`);
-      this.#mainWindow?.setTitle("DSH Intel — 设置");
+      this.#mainWindow?.setTitle("DSH Intel — 控制中心");
     }
   }
 
@@ -123,12 +122,8 @@ export class AppController implements ControlHost {
       const url = await this.#connection.start();
       this.#connected = true;
       this.#lastError = "";
-      this.#mainWindow?.navigate(url);
-      this.#mainWindow?.setTitle("DeepSeek Harness — DSH Intel");
-      this.#mainWindow?.show();
-      this.#mainWindow?.focus();
       await this.#refreshServiceStatus();
-      return { connected: true, message: `已连接 ${url}` };
+      return { connected: true, message: `已连接 ${redactAuthenticationToken(url)}` };
     } catch (error) {
       this.#connected = false;
       this.#lastError = error instanceof Error ? error.message : String(error);
@@ -138,12 +133,16 @@ export class AppController implements ControlHost {
   }
 
   async openHarness(): Promise<{ connected: boolean; message: string }> {
-    if (this.#connected && this.#mainWindow !== null) {
-      this.#mainWindow.show();
-      this.#mainWindow.focus();
-      return { connected: true, message: "已打开 DeepSeek Harness" };
+    if (!this.#connected) {
+      const result = await this.connect();
+      if (!result.connected) return result;
     }
-    return await this.connect();
+    const url = this.#connection?.url ?? "";
+    if (url === "" || this.#mainWindow === null) {
+      return { connected: false, message: "当前窗口不可用。" };
+    }
+    await this.#showHarness(url);
+    return { connected: true, message: "已在当前窗口打开 DeepSeek Harness" };
   }
 
   async startLocalService(): Promise<{ success: boolean; message: string }> {
@@ -224,6 +223,16 @@ export class AppController implements ControlHost {
     if (shortcut === undefined || this.#mainWindow === null) {
       return { success: false, message: "快捷方式不存在。" };
     }
+    if (shortcut.kind !== "url" && this.#currentView !== "harness") {
+      if (!this.#connected) {
+        const connection = await this.connect();
+        if (!connection.connected) {
+          return { success: false, message: connection.message };
+        }
+      }
+      await this.#showHarness();
+      await delay(800);
+    }
     const result = await activateShortcut(this.#mainWindow, shortcut);
     if (!result.success) this.#logger.warn(result.message);
     return result;
@@ -248,12 +257,10 @@ export class AppController implements ControlHost {
 
   async #syncLocalServiceProfile(localService: LocalServiceState): Promise<void> {
     const profile = activeProfile(this.#config);
-    const localBaseUrl = "http://127.0.0.1:3080";
     if (
       localService.running &&
       profile.transport === "https" &&
-      (profile.webUrl === localBaseUrl || profile.webUrl.startsWith(`${localBaseUrl}?`)) &&
-      profile.webUrl !== localService.url
+      shouldSyncLocalServiceUrl(profile.webUrl, localService.url)
     ) {
       profile.webUrl = localService.url;
       await saveConfig(this.#config);
@@ -262,7 +269,7 @@ export class AppController implements ControlHost {
 
   #createWindows(): void {
     this.#mainWindow = new Deno.BrowserWindow({
-      title: "DSH Intel",
+      title: "DSH Intel — 控制中心",
       width: 1280,
       height: 840,
     });
@@ -272,13 +279,6 @@ export class AppController implements ControlHost {
       void this.#handleMenu(id);
     });
     this.#mainWindow.navigate(`${this.#controlOrigin}/control/`);
-
-    this.#controlWindow = new Deno.BrowserWindow({
-      title: "DSH Intel 控制中心",
-      width: 1080,
-      height: 760,
-    });
-    this.#controlWindow.navigate(`${this.#controlOrigin}/control/`);
   }
 
   #applyMenu(): void {
@@ -324,10 +324,31 @@ export class AppController implements ControlHost {
     }
   }
 
+  async #showHarness(url = this.#connection?.url ?? ""): Promise<void> {
+    const window = this.#mainWindow;
+    if (window === null || url === "") return;
+    if (this.#currentView === "harness" && url === this.#connection?.url) {
+      window.show();
+      window.focus();
+      return;
+    }
+    const loaded = new Promise<void>((resolve) => {
+      window.addEventListener("load", () => resolve(), { once: true });
+    });
+    this.#currentView = "harness";
+    window.navigate(url);
+    window.setTitle("DeepSeek Harness — DSH Intel");
+    window.show();
+    window.focus();
+    await Promise.race([loaded, delay(10_000)]);
+  }
+
   #openControlCenter(): void {
-    const window = this.#controlWindow;
+    const window = this.#mainWindow;
     if (window === null) return;
+    this.#currentView = "control";
     window.navigate(`${this.#controlOrigin}/control/`);
+    window.setTitle("DSH Intel — 控制中心");
     window.show();
     window.focus();
   }

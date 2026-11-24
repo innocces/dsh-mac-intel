@@ -2,7 +2,7 @@ import type { AppProfile, ServiceStatus } from "./types.ts";
 import { Logger } from "./logger.ts";
 import { fetchComponentVersions } from "./registry.ts";
 import { type ServiceOperation, SshClient } from "./ssh.ts";
-import { waitForHttp } from "./connection.ts";
+import { redactAuthenticationToken, waitForHttp } from "./connection.ts";
 
 /** Result returned after a managed update operation. */
 export interface UpdateResult {
@@ -45,7 +45,7 @@ export class ServiceClient {
       ok: reachable,
       service: {
         active: reachable,
-        url: this.#profile.webUrl,
+        url: redactAuthenticationToken(this.#profile.webUrl),
       },
       node: { version: "managed remotely" },
       harness: {

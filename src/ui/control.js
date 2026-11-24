@@ -36,9 +36,9 @@ function bindEvents() {
   byId("check-desktop-button").addEventListener("click", () => void checkUpdates());
   byId("connect-button").addEventListener("click", () => void connectService());
   byId("open-harness-button").addEventListener("click", () => void openHarness());
+  byId("enter-harness-button").addEventListener("click", () => void connectService());
   byId("start-local-service-button").addEventListener("click", () => void startLocalService());
   byId("stop-local-service-button").addEventListener("click", () => void stopLocalService());
-  byId("control-button").addEventListener("click", () => void post("/api/open/control"));
   byId("save-settings-button").addEventListener("click", () => void saveSettings());
   byId("apply-standard-config-button").addEventListener("click", applyStandardConfig);
   byId("add-shortcut-button").addEventListener("click", openShortcutDialog);
@@ -96,6 +96,8 @@ function renderConnection(state) {
   }
   const openButton = /** @type {HTMLButtonElement} */ (byId("open-harness-button"));
   openButton.textContent = connected ? "显示 Harness" : "连接并打开";
+  const enterButton = /** @type {HTMLButtonElement} */ (byId("enter-harness-button"));
+  enterButton.textContent = connected ? "进入 Harness" : "连接并进入";
 }
 
 function renderVersions(state) {
@@ -364,6 +366,7 @@ async function connectService() {
     if (!result.connected) throw new Error(result.message);
     showToast(result.message);
     await refreshState();
+    await openHarness(false);
   } catch (error) {
     showError(error instanceof Error ? error.message : String(error));
   } finally {
@@ -372,11 +375,11 @@ async function connectService() {
   }
 }
 
-async function openHarness() {
+async function openHarness(showMessage = true) {
   try {
     const result = await post("/api/open/harness");
     if (!result.connected) throw new Error(result.message);
-    showToast(result.message);
+    if (showMessage) showToast(result.message);
   } catch (error) {
     showError(error instanceof Error ? error.message : String(error));
   }
@@ -391,6 +394,7 @@ async function startLocalService() {
     if (!result.success) throw new Error(result.message);
     showToast(result.message);
     await refreshState();
+    await openHarness(false);
   } catch (error) {
     showError(error instanceof Error ? error.message : String(error));
   } finally {

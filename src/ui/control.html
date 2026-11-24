@@ -50,7 +50,7 @@
             <button class="button button-secondary" id="refresh-button"
               type="button">刷新状态</button>
             <button class="button button-primary" id="open-harness-button"
-              type="button">打开 Harness</button>
+              type="button" title="在当前窗口中打开 Harness">打开 Harness</button>
           </div>
         </header>
 
@@ -65,13 +65,14 @@
             <h2>让官方 Web UI 在 Intel Mac 上继续可用</h2>
             <p>
               DSH Intel 使用 Deno Desktop 作为轻量桌面壳，通过 SSH 隧道或 HTTPS 连接常驻的
-              DeepSeek Harness 服务；Our Free Model 插件默认随服务安装。
+              DeepSeek Harness 服务；Our Free Model 插件默认随服务安装。控制中心与 Harness
+              在同一个应用窗口内切换，不再额外打开浏览器窗口。
             </p>
             <div class="hero-actions">
               <button class="button button-primary" id="connect-button"
                 type="button">连接服务</button>
-              <button class="button button-quiet" id="control-button"
-                type="button">显示此窗口</button>
+              <button class="button button-quiet" id="enter-harness-button"
+                type="button">进入 Harness</button>
             </div>
           </div>
           <div class="hero-orbit" aria-hidden="true">

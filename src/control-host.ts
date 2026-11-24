@@ -8,7 +8,7 @@ export interface ControlHost {
   saveConfig(config: AppConfig): Promise<AppConfig>;
   /** Reconnect using the active profile. */
   connect(): Promise<{ connected: boolean; message: string }>;
-  /** Open the official DSH web application. */
+  /** Open the official DSH web application in the current window. */
   openHarness(): Promise<{ connected: boolean; message: string }>;
   /** Install, start, and select the local macOS service. */
   startLocalService(): Promise<{ success: boolean; message: string }>;
@@ -18,9 +18,9 @@ export interface ControlHost {
   update(component: "plugin" | "harness" | "all"): Promise<{ success: boolean; message: string }>;
   /** Refresh remote and registry version information. */
   checkUpdates(): Promise<{ success: boolean; message: string }>;
-  /** Activate a configured shortcut in the official DSH web window. */
+  /** Activate a configured shortcut in the current application window. */
   activateShortcut(shortcutId: string): Promise<{ success: boolean; message: string }>;
-  /** Bring the dedicated control-center window to the foreground. */
+  /** Show the control center in the current application window. */
   showControlCenter(): Promise<{ success: boolean; message: string }>;
   /** Return recent diagnostic entries. */
   logs(): Promise<{ timestamp: string; level: string; message: string; detail: string }[]>;

@@ -106,7 +106,7 @@ class PreviewHost implements ControlHost {
   }
 
   openHarness(): Promise<{ connected: boolean; message: string }> {
-    return Promise.resolve({ connected: false, message: "预览模式不打开远程 Harness。" });
+    return Promise.resolve({ connected: true, message: "预览模式保持当前控制中心页面。" });
   }
 
   startLocalService(): Promise<{ success: boolean; message: string }> {
