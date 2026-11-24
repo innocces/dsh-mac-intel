@@ -65,6 +65,12 @@ export class ControlServer {
         if (url.pathname === "/api/open/harness") {
           return json(await this.#host.openHarness());
         }
+        if (url.pathname === "/api/local-service/start") {
+          return json(await this.#host.startLocalService());
+        }
+        if (url.pathname === "/api/local-service/stop") {
+          return json(await this.#host.stopLocalService());
+        }
         if (url.pathname === "/api/open/control") {
           return json(await this.#host.showControlCenter());
         }

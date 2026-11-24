@@ -115,11 +115,22 @@ export interface AppUpdateState {
   message: string;
 }
 
+/** Lifecycle state of the optional service running on this Mac. */
+export interface LocalServiceState {
+  status: "not-installed" | "installing" | "stopped" | "starting" | "running" | "error";
+  installed: boolean;
+  running: boolean;
+  version: string;
+  url: string;
+  message: string;
+}
+
 /** Aggregated state rendered by the local control center. */
 export interface ControlState {
   config: AppConfig;
   environment: EnvironmentReport;
   service: ServiceStatus | null;
+  localService: LocalServiceState;
   appUpdate: AppUpdateState;
   connected: boolean;
   lastError: string;

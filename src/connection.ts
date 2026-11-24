@@ -20,7 +20,7 @@ export class DshConnection {
     if (this.#profile.transport === "https") {
       this.#url = this.#profile.webUrl;
       await this.#assertReachable(this.#url);
-      this.#logger.info(`DSH web endpoint is ${this.#url}`);
+      this.#logger.info(`DSH web endpoint is ${redactAuthenticationToken(this.#url)}`);
       return this.#url;
     }
 
@@ -58,6 +58,17 @@ export class DshConnection {
   async #assertReachable(url: string): Promise<void> {
     const reachable = await waitForHttp(url, 4_000);
     if (!reachable) throw new Error(`DSH web endpoint is not reachable: ${url}`);
+  }
+}
+
+/** Remove a one-time authentication token before writing a URL to diagnostics. */
+export function redactAuthenticationToken(value: string): string {
+  try {
+    const url = new URL(value);
+    if (url.searchParams.has("token")) url.searchParams.delete("token");
+    return url.toString().replace(/\/$/, "");
+  } catch {
+    return value;
   }
 }
 

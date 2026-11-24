@@ -3,6 +3,7 @@ import type {
   AppUpdateState,
   ControlState,
   EnvironmentReport,
+  LocalServiceState,
   ServiceStatus,
 } from "./types.ts";
 import { Logger } from "./logger.ts";
@@ -15,10 +16,12 @@ import type { ControlHost } from "./control-host.ts";
 import { buildApplicationMenu, MENU_IDS } from "./menu.ts";
 import { activateShortcut } from "./actions.ts";
 import { fetchComponentVersions } from "./registry.ts";
+import { LocalServiceManager } from "./local-service.ts";
 
 /** Coordinates the desktop windows, managed connection, and update surfaces. */
 export class AppController implements ControlHost {
   readonly #logger: Logger;
+  readonly #localService: LocalServiceManager;
   #config: AppConfig = {
     schemaVersion: 2,
     activeProfileId: "default",
@@ -51,11 +54,14 @@ export class AppController implements ControlHost {
 
   constructor(logger: Logger) {
     this.#logger = logger;
+    this.#localService = new LocalServiceManager(logger);
   }
 
   /** Start the local control center and the desktop windows. */
   async start(): Promise<void> {
     this.#config = await loadConfig();
+    const localService = await this.#localService.getState();
+    await this.#syncLocalServiceProfile(localService);
     this.#environment = await detectEnvironment();
     this.#controlServer = new ControlServer(this, this.#logger);
     this.#controlOrigin = await this.#controlServer.start();
@@ -82,10 +88,13 @@ export class AppController implements ControlHost {
   }
 
   async getState(): Promise<ControlState> {
+    const localService = await this.#localService.getState();
+    await this.#syncLocalServiceProfile(localService);
     return {
       config: this.#config,
       environment: this.#environment ?? await detectEnvironment(),
       service: this.#serviceStatus,
+      localService,
       appUpdate: this.#appUpdate,
       connected: this.#connected,
       lastError: this.#lastError,
@@ -135,6 +144,39 @@ export class AppController implements ControlHost {
       return { connected: true, message: "已打开 DeepSeek Harness" };
     }
     return await this.connect();
+  }
+
+  async startLocalService(): Promise<{ success: boolean; message: string }> {
+    try {
+      const local = await this.#localService.start();
+      const profile = activeProfile(this.#config);
+      profile.name = "本机服务";
+      profile.transport = "https";
+      profile.webUrl = local.url;
+      await this.saveConfig(this.#config);
+      const connection = await this.connect();
+      const message = connection.connected
+        ? "本机服务已启动，连接已切换到 http://127.0.0.1:3080。"
+        : `本机服务已启动，但连接失败：${connection.message}`;
+      return { success: connection.connected, message };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.#lastError = message;
+      return { success: false, message };
+    }
+  }
+
+  async stopLocalService(): Promise<{ success: boolean; message: string }> {
+    try {
+      const local = await this.#localService.stop();
+      this.#connected = false;
+      this.#lastError = "";
+      return { success: true, message: local.message };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.#lastError = message;
+      return { success: false, message };
+    }
   }
 
   async update(
@@ -202,6 +244,20 @@ export class AppController implements ControlHost {
 
   serviceStatus(): ServiceStatus | null {
     return this.#serviceStatus;
+  }
+
+  async #syncLocalServiceProfile(localService: LocalServiceState): Promise<void> {
+    const profile = activeProfile(this.#config);
+    const localBaseUrl = "http://127.0.0.1:3080";
+    if (
+      localService.running &&
+      profile.transport === "https" &&
+      (profile.webUrl === localBaseUrl || profile.webUrl.startsWith(`${localBaseUrl}?`)) &&
+      profile.webUrl !== localService.url
+    ) {
+      profile.webUrl = localService.url;
+      await saveConfig(this.#config);
+    }
   }
 
   #createWindows(): void {

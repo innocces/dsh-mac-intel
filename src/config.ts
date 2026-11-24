@@ -214,6 +214,7 @@ export async function saveConfig(config: AppConfig, path = configPath()): Promis
   await Deno.mkdir(directory, { recursive: true });
   const temporaryPath = `${path}.${Deno.pid}.tmp`;
   await Deno.writeTextFile(temporaryPath, `${JSON.stringify(normalized, null, 2)}\n`);
+  await Deno.chmod(temporaryPath, 0o600);
   await Deno.rename(temporaryPath, path);
 }
 

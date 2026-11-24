@@ -30,8 +30,8 @@ export async function detectEnvironment(): Promise<EnvironmentReport> {
     label: "Node.js",
     status: nodeVersion ? "ok" : "warning",
     detail: nodeVersion
-      ? `${nodeVersion}；仅远程服务安装脚本需要，桌面端不依赖 Node`
-      : "未检测到 Node.js；桌面端无需安装，远程服务脚本可自动下载隔离运行时",
+      ? `${nodeVersion}；桌面壳本身不依赖 Node，本机服务会使用独立的隔离运行时`
+      : "未检测到系统 Node.js；桌面壳无需安装，本机服务可自动下载隔离运行时",
     required: false,
   });
   findings.push({

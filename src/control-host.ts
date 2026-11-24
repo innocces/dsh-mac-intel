@@ -10,6 +10,10 @@ export interface ControlHost {
   connect(): Promise<{ connected: boolean; message: string }>;
   /** Open the official DSH web application. */
   openHarness(): Promise<{ connected: boolean; message: string }>;
+  /** Install, start, and select the local macOS service. */
+  startLocalService(): Promise<{ success: boolean; message: string }>;
+  /** Stop the local macOS service without deleting its installation. */
+  stopLocalService(): Promise<{ success: boolean; message: string }>;
   /** Run a managed update operation. */
   update(component: "plugin" | "harness" | "all"): Promise<{ success: boolean; message: string }>;
   /** Refresh remote and registry version information. */
