@@ -126,10 +126,32 @@ mv DSH-Intel.app /Applications/
 > sources in the release before opening the application. Do not bypass system security warnings when
 > the source cannot be verified.
 
-### 2. Deploy the persistent service
+### 2. Start the persistent service on this Mac (recommended)
 
-The `dsh-mac-intel-service.tar.gz` service package currently targets **Linux x86_64**. Run the
-following on the server:
+Open **Connection settings** in DSH Intel and click **"Start and fill connection"**. The app
+automatically:
+
+1. Downloads an isolated Node.js `24.9.0` macOS x64 runtime and verifies its SHA-256;
+2. Installs the official `@deepseek-ai/dsh` package and the default Our Free Model plugin;
+3. Registers the macOS LaunchAgent `com.innocces.dsh-mac-intel.service`;
+4. Starts DSH Web on `127.0.0.1:3080` only;
+5. Switches the connection mode to direct HTTP and fills `http://127.0.0.1:3080`.
+
+The first installation needs access to `nodejs.org` and the npm registry and takes roughly `1.6 GB`
+of disk space. Runtime files are stored under
+`~/Library/Application Support/DSH Intel/local-service`, with the LaunchAgent log at `service.log`
+in the same directory. Use **"Stop local service"** when it is no longer needed; stopping does not
+delete the installed files.
+
+> The local service listens on loopback only and is never exposed directly to the LAN or public
+> internet. One-click managed-component updates still require an SSH profile; installing and running
+> the local service does not require a remote server.
+
+### 3. Deploy the persistent service on a Linux server
+
+For 7×24-hour operation, deploy the service on a remote Linux x86_64 server. The
+`dsh-mac-intel-service.tar.gz` service package currently targets **Linux x86_64**. Run the following
+on the server:
 
 ```bash
 tar -xzf dsh-mac-intel-service.tar.gz
@@ -159,7 +181,7 @@ systemctl --user status dsh-mac-intel.service
 journalctl --user -u dsh-mac-intel.service -f
 ```
 
-### 3. Connect the Mac
+### 4. Connect the Mac
 
 Open DSH Intel and select **SSH tunnel (recommended)** under "Connection settings". The official
 DeepSeek Harness Web UI listens on `http://127.0.0.1:3080` by default, and OpenSSH uses port `22`.

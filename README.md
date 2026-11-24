@@ -109,9 +109,27 @@ mv DSH-Intel.app /Applications/
 > 可能因此显示安全提示；请先核对 Release 中的
 > SHA-256、源码和第三方来源，再决定是否打开。不要在无法核对来源时绕过系统安全提示。
 
-### 2. 部署常驻服务
+### 2. 在本机启动常驻服务（推荐）
 
-服务安装包 `dsh-mac-intel-service.tar.gz` 当前面向 **Linux x86_64**。在服务器上执行：
+打开 DSH Intel 的“连接设置”，点击 **“启动并填入连接”**。应用会自动完成以下操作：
+
+1. 下载并通过 SHA-256 校验隔离的 Node.js `24.9.0` macOS x64 运行时；
+2. 安装官方 `@deepseek-ai/dsh` 和默认的 Our Free Model 插件；
+3. 注册 macOS LaunchAgent `com.innocces.dsh-mac-intel.service`；
+4. 仅在 `127.0.0.1:3080` 启动 DSH Web；
+5. 自动把连接方式切换为 HTTP 直连，并填入 `http://127.0.0.1:3080`。
+
+首次安装需要访问 `nodejs.org` 和 npm registry，耗时取决于网络；完整运行时约占 `1.6 GB`。 文件保存在
+`~/Library/Application Support/DSH Intel/local-service`，LaunchAgent 日志位于同目录的
+`service.log`。不再需要时可以在同一界面点击“停止本机服务”；停止不会删除已安装文件。
+
+> 本机服务只监听 loopback，不会直接暴露到局域网或公网。当前受管组件的一键更新仍要求 SSH
+> 配置；本机模式的安装与运行不依赖远程服务器。
+
+### 3. 在 Linux 服务器部署常驻服务
+
+如果需要 7×24 小时运行，也可以在远程 Linux x86_64 服务器部署。服务安装包
+`dsh-mac-intel-service.tar.gz` 当前面向 **Linux x86_64**。在服务器上执行：
 
 ```bash
 tar -xzf dsh-mac-intel-service.tar.gz
@@ -141,7 +159,7 @@ systemctl --user status dsh-mac-intel.service
 journalctl --user -u dsh-mac-intel.service -f
 ```
 
-### 3. 连接 Mac
+### 4. 连接 Mac
 
 打开 DSH Intel，在“连接设置”中选择 **SSH 隧道（推荐）**。DeepSeek Harness 官方 Web UI
 的标准监听地址是 `http://127.0.0.1:3080`，OpenSSH 默认端口是 `22`；点击 **“填入官方标准配置”**
