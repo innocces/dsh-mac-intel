@@ -51,52 +51,63 @@ export class ScreencastRecorder {
   async write(output: string): Promise<void> {
     if (this.#frames.length < 2) throw new Error("Chrome produced too few screencast frames.");
     if (!this.#directory) throw new Error("The screencast recorder was not started.");
-    const ffmpeg = await findFfmpeg();
-    const manifest = join(this.#directory, "frames.txt");
-    const lines: string[] = [];
-    for (let index = 0; index < this.#frames.length; index += 1) {
-      const current = this.#frames[index];
-      const next = this.#frames[index + 1];
-      const duration = next
-        ? Math.min(0.5, Math.max(0.033, next.timestamp - current.timestamp))
-        : 0.5;
-      lines.push(`file 'frame-${String(index + 1).padStart(6, "0")}.jpg'`);
-      lines.push(`duration ${duration.toFixed(3)}`);
+    const directory = this.#directory;
+    try {
+      const ffmpeg = await findFfmpeg();
+      const manifest = join(directory, "frames.txt");
+      const lines: string[] = [];
+      for (let index = 0; index < this.#frames.length; index += 1) {
+        const current = this.#frames[index];
+        const next = this.#frames[index + 1];
+        const duration = next
+          ? Math.min(0.5, Math.max(0.033, next.timestamp - current.timestamp))
+          : 0.5;
+        lines.push(`file 'frame-${String(index + 1).padStart(6, "0")}.jpg'`);
+        lines.push(`duration ${duration.toFixed(3)}`);
+      }
+      lines.push(`file 'frame-${String(this.#frames.length).padStart(6, "0")}.jpg'`);
+      await Deno.writeTextFile(manifest, `${lines.join("\n")}\n`);
+      await Deno.mkdir(dirname(output), { recursive: true });
+      const command = await new Deno.Command(ffmpeg, {
+        args: [
+          "-y",
+          "-f",
+          "concat",
+          "-safe",
+          "0",
+          "-i",
+          manifest,
+          "-vf",
+          "scale=1440:1000:force_original_aspect_ratio=decrease:flags=lanczos," +
+          "pad=1440:1000:(ow-iw)/2:(oh-ih)/2:color=0x151517,fps=30,format=yuv420p",
+          "-c:v",
+          "libx264",
+          "-preset",
+          "medium",
+          "-crf",
+          "22",
+          "-movflags",
+          "+faststart",
+          output,
+        ],
+        stdout: "null",
+        stderr: "piped",
+      }).output();
+      if (!command.success) {
+        throw new Error(
+          new TextDecoder().decode(command.stderr) || "ffmpeg could not create the MP4.",
+        );
+      }
+    } finally {
+      await Deno.remove(directory, { recursive: true }).catch(() => undefined);
+      if (this.#directory === directory) this.#directory = undefined;
     }
-    lines.push(`file 'frame-${String(this.#frames.length).padStart(6, "0")}.jpg'`);
-    await Deno.writeTextFile(manifest, `${lines.join("\n")}\n`);
-    await Deno.mkdir(dirname(output), { recursive: true });
-    const command = await new Deno.Command(ffmpeg, {
-      args: [
-        "-y",
-        "-f",
-        "concat",
-        "-safe",
-        "0",
-        "-i",
-        manifest,
-        "-vf",
-        "scale=1440:1000:force_original_aspect_ratio=decrease:flags=lanczos," +
-        "pad=1440:1000:(ow-iw)/2:(oh-ih)/2:color=0x151517,fps=30,format=yuv420p",
-        "-c:v",
-        "libx264",
-        "-preset",
-        "medium",
-        "-crf",
-        "22",
-        "-movflags",
-        "+faststart",
-        output,
-      ],
-      stdout: "null",
-      stderr: "piped",
-    }).output();
-    if (!command.success) {
-      throw new Error(
-        new TextDecoder().decode(command.stderr) || "ffmpeg could not create the MP4.",
-      );
-    }
-    await Deno.remove(this.#directory, { recursive: true });
+  }
+
+  /** Remove temporary frames after any recording failure. */
+  async dispose(): Promise<void> {
+    if (!this.#directory) return;
+    await Deno.remove(this.#directory, { recursive: true }).catch(() => undefined);
     this.#directory = undefined;
   }
 

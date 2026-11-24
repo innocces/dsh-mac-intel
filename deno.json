@@ -9,7 +9,7 @@
     "strict": true
   },
   "tasks": {
-    "dev": "deno run --allow-env --allow-net=127.0.0.1,nodejs.org,registry.npmjs.org --allow-read --allow-run=ssh,node,deno,tar,launchctl --allow-write --watch main.ts",
+    "dev": "deno run --allow-env --allow-net=127.0.0.1,nodejs.org,registry.npmjs.org --allow-read --allow-run=ssh,node,deno,tar,launchctl,df --allow-write --watch main.ts",
     "fmt": "deno fmt",
     "lint": "deno lint",
     "typecheck": "deno check main.ts src/*.ts scripts/*.ts tests/*.ts",
@@ -48,7 +48,8 @@
         "node",
         "deno",
         "tar",
-        "launchctl"
+        "launchctl",
+        "df"
       ],
       "net": [
         "127.0.0.1",

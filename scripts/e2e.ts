@@ -77,6 +77,7 @@ try {
     ),
   );
 } finally {
+  await recorder.dispose();
   await browser?.close();
   server.kill("SIGTERM");
   await server.status;

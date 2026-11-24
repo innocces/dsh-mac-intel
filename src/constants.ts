@@ -19,3 +19,21 @@ export const LOCAL_NODE_SHA256 =
 
 /** LaunchAgent identity for the optional macOS local service. */
 export const LOCAL_SERVICE_LABEL = "com.innocces.dsh-mac-intel.service" as const;
+
+/** LaunchAgent identity for periodic local-service storage cleanup. */
+export const LOCAL_CLEANUP_LABEL = "com.innocces.dsh-mac-intel.cleanup" as const;
+
+/** Maximum size of temporary files retained by the isolated local service. */
+export const LOCAL_TEMP_MAX_BYTES = 1024 * 1024 * 1024;
+
+/** Age after which failed update artifacts may be removed. */
+export const LOCAL_TEMP_STALE_MS = 24 * 60 * 60 * 1000;
+
+/** Grace period during which an active temporary download is not removed. */
+export const LOCAL_TEMP_ACTIVE_GRACE_MS = 10 * 60 * 1000;
+
+/** Interval between periodic storage-cleanup runs. */
+export const LOCAL_CLEANUP_INTERVAL_SECONDS = 300;
+
+/** Free space required before installing or updating the local runtime. */
+export const LOCAL_INSTALL_MIN_FREE_BYTES = 2 * 1024 * 1024 * 1024;
