@@ -52,6 +52,34 @@ export async function assertManagedUpdatesRequireSsh(page: E2ePage): Promise<voi
   }
 }
 
+/** Assert that the official DSH and OpenSSH defaults are present in the form. */
+export async function assertOfficialConnectionDefaults(page: E2ePage): Promise<void> {
+  const values = await page.evaluate<Record<string, string>>(`(() => {
+    const value = (id) => document.getElementById(id).value;
+    return {
+      transport: value('transport-select'),
+      webUrl: value('web-url'),
+      sshPort: value('ssh-port'),
+      remotePort: value('remote-port'),
+      localPort: value('local-port'),
+      servicePath: value('service-path'),
+    };
+  })()`);
+  const expected = {
+    transport: "ssh",
+    webUrl: "http://127.0.0.1:3080",
+    sshPort: "22",
+    remotePort: "3080",
+    localPort: "3080",
+    servicePath: "~/.local/share/dsh-mac-intel/bin/dsh-mac-intel-service",
+  };
+  for (const [key, value] of Object.entries(expected)) {
+    if (values[key] !== value) {
+      throw new Error(`Official default ${key} should be ${value}, got ${values[key]}.`);
+    }
+  }
+}
+
 /** Assert that managed updates become available after saving a valid SSH profile. */
 export async function assertManagedUpdatesEnabled(page: E2ePage): Promise<void> {
   const enabled = await page.evaluate<boolean>(

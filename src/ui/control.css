@@ -593,6 +593,13 @@ select:focus-visible {
   gap: 20px;
 }
 
+.section-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 .section-heading h2 {
   margin: 5px 0 0;
   font-family: "Montserrat", sans-serif;
@@ -947,6 +954,34 @@ select:focus-visible {
   grid-column: span 2;
 }
 
+.standard-config-note {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--border));
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+}
+
+.standard-config-note strong {
+  color: var(--accent-strong);
+  font-family: "Montserrat", sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+.standard-config-note p {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.standard-config-note code {
+  color: var(--text);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 10px;
+}
+
 .settings-footer {
   display: flex;
   flex-wrap: wrap;
@@ -1134,9 +1169,14 @@ select:focus-visible {
     flex-direction: column;
   }
 
-  .topbar-actions {
+  .topbar-actions,
+  .section-actions {
     width: 100%;
     flex-wrap: wrap;
+  }
+
+  .section-actions {
+    justify-content: flex-start;
   }
 
   .connection-pill {

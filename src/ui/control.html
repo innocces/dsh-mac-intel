@@ -235,8 +235,12 @@
               <span class="section-kicker">CONNECTION</span>
               <h2>连接设置</h2>
             </div>
-            <button class="button button-primary" id="save-settings-button"
-              type="button">保存设置</button>
+            <div class="section-actions">
+              <button class="button button-secondary" id="apply-standard-config-button"
+                type="button">填入官方标准配置</button>
+              <button class="button button-primary" id="save-settings-button"
+                type="button">保存设置</button>
+            </div>
           </div>
 
           <form class="settings-form" id="settings-form">
@@ -254,16 +258,18 @@
               </label>
               <label class="wide-field https-field">
                 <span>Web 地址</span>
-                <input id="web-url" name="webUrl" type="url" placeholder="https://dsh.example.com">
+                <input id="web-url" name="webUrl" type="url" placeholder="http://127.0.0.1:3080">
               </label>
               <label class="ssh-field">
-                <span>服务器</span>
-                <input id="ssh-host" name="host" type="text" placeholder="dsh.example.com"
+                <span>服务器或 OpenSSH 主机别名</span>
+                <input id="ssh-host" name="host" type="text"
+                  placeholder="dsh.example.com 或 ~/.ssh/config 中的 Host"
                   autocomplete="off">
               </label>
               <label class="ssh-field">
-                <span>用户</span>
-                <input id="ssh-user" name="user" type="text" placeholder="dsh"
+                <span>用户（可选）</span>
+                <input id="ssh-user" name="user" type="text"
+                  placeholder="主机别名已配置 User 时留空"
                   autocomplete="username">
               </label>
               <label class="ssh-field">
@@ -290,6 +296,14 @@
                 <input id="service-path" name="servicePath" type="text"
                   value="~/.local/share/dsh-mac-intel/bin/dsh-mac-intel-service">
               </label>
+            </div>
+            <div class="standard-config-note">
+              <strong>官方标准配置</strong>
+              <p>
+                DeepSeek Harness Web 默认监听 <code>127.0.0.1:3080</code>，OpenSSH 默认端口为
+                <code>22</code>。SSH 模式会自动把远端 3080 端口转发到本机 3080 端口；
+                服务器或 <code>~/.ssh/config</code> 主机别名仍需按实际部署填写。
+              </p>
             </div>
             <div class="settings-footer">
               <label class="check-field">

@@ -13,6 +13,16 @@ let currentState = null;
 /** @type {number|undefined} */
 let toastTimer;
 
+/** Deployment-independent defaults published by the official DSH and OpenSSH. */
+const STANDARD_CONNECTION_CONFIG = Object.freeze({
+  transport: "ssh",
+  webUrl: "http://127.0.0.1:3080",
+  sshPort: "22",
+  remotePort: "3080",
+  localPort: "3080",
+  servicePath: "~/.local/share/dsh-mac-intel/bin/dsh-mac-intel-service",
+});
+
 const byId = /** @param {string} id */ (id) => document.getElementById(id);
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -28,6 +38,7 @@ function bindEvents() {
   byId("open-harness-button").addEventListener("click", () => void openHarness());
   byId("control-button").addEventListener("click", () => void post("/api/open/control"));
   byId("save-settings-button").addEventListener("click", () => void saveSettings());
+  byId("apply-standard-config-button").addEventListener("click", applyStandardConfig);
   byId("add-shortcut-button").addEventListener("click", openShortcutDialog);
   byId("transport-select").addEventListener("change", updateTransportFields);
   byId("ssh-host").addEventListener("input", updateUpdateAvailability);
@@ -221,12 +232,16 @@ function populateSettings(state) {
   byId("web-url").value = profile.webUrl ?? "";
   byId("ssh-host").value = profile.ssh?.host ?? "";
   byId("ssh-user").value = profile.ssh?.user ?? "";
-  byId("ssh-port").value = String(profile.ssh?.port ?? 22);
+  byId("ssh-port").value = String(profile.ssh?.port ?? STANDARD_CONNECTION_CONFIG.sshPort);
   byId("ssh-identity").value = profile.ssh?.identityFile ?? "";
-  byId("remote-port").value = String(profile.ssh?.remotePort ?? 3080);
-  byId("local-port").value = String(profile.ssh?.localPort ?? 3080);
+  byId("remote-port").value = String(
+    profile.ssh?.remotePort ?? STANDARD_CONNECTION_CONFIG.remotePort,
+  );
+  byId("local-port").value = String(
+    profile.ssh?.localPort ?? STANDARD_CONNECTION_CONFIG.localPort,
+  );
   byId("service-path").value = profile.ssh?.servicePath ??
-    "~/.local/share/dsh-mac-intel/bin/dsh-mac-intel-service";
+    STANDARD_CONNECTION_CONFIG.servicePath;
   byId("auto-check").checked = Boolean(config.updates?.autoCheck);
   byId("auto-plugin").checked = Boolean(config.updates?.autoUpdatePlugin);
   byId("auto-harness").checked = Boolean(config.updates?.autoUpdateHarness);
@@ -250,14 +265,27 @@ function updateUpdateAvailability() {
   const profile = config?.profiles?.find((item) => item.id === config.activeProfileId) ??
     config?.profiles?.[0];
   const ready = profile?.transport === "ssh" &&
-    Boolean(profile.ssh?.host?.trim()) &&
-    Boolean(profile.ssh?.user?.trim());
+    Boolean(profile.ssh?.host?.trim());
   for (const button of document.querySelectorAll("[data-update]")) {
     /** @type {HTMLButtonElement} */ (button).disabled = !ready;
   }
   byId("update-requirement").textContent = ready
     ? "SSH 配置已就绪；更新将通过远程 dsh-mac-intel-service 辅助程序执行。"
     : "一键更新需要配置 SSH 连接，并在远程服务器安装 dsh-mac-intel-service 辅助程序。";
+}
+
+/** Apply the deployment-independent official defaults without replacing user-specific values. */
+function applyStandardConfig() {
+  byId("transport-select").value = STANDARD_CONNECTION_CONFIG.transport;
+  byId("profile-name").value = "SSH 服务";
+  byId("web-url").value = STANDARD_CONNECTION_CONFIG.webUrl;
+  byId("ssh-port").value = STANDARD_CONNECTION_CONFIG.sshPort;
+  byId("remote-port").value = STANDARD_CONNECTION_CONFIG.remotePort;
+  byId("local-port").value = STANDARD_CONNECTION_CONFIG.localPort;
+  byId("service-path").value = STANDARD_CONNECTION_CONFIG.servicePath;
+  updateTransportFields();
+  showToast("已填入官方标准配置；请填写服务器或 OpenSSH 主机别名。");
+  byId("ssh-host").focus();
 }
 
 async function saveSettings() {
@@ -270,10 +298,12 @@ async function saveSettings() {
   profile.webUrl = byId("web-url").value.trim();
   profile.ssh.host = byId("ssh-host").value.trim();
   profile.ssh.user = byId("ssh-user").value.trim();
-  profile.ssh.port = Number(byId("ssh-port").value) || 22;
+  profile.ssh.port = Number(byId("ssh-port").value) || Number(STANDARD_CONNECTION_CONFIG.sshPort);
   profile.ssh.identityFile = byId("ssh-identity").value.trim();
-  profile.ssh.remotePort = Number(byId("remote-port").value) || 3080;
-  profile.ssh.localPort = Number(byId("local-port").value) || 3080;
+  profile.ssh.remotePort = Number(byId("remote-port").value) ||
+    Number(STANDARD_CONNECTION_CONFIG.remotePort);
+  profile.ssh.localPort = Number(byId("local-port").value) ||
+    Number(STANDARD_CONNECTION_CONFIG.localPort);
   profile.ssh.servicePath = byId("service-path").value.trim();
   config.updates.autoCheck = byId("auto-check").checked;
   config.updates.autoUpdatePlugin = byId("auto-plugin").checked;
@@ -295,10 +325,9 @@ async function connectService() {
   if (!(await saveSettings())) return;
   const transport = byId("transport-select").value;
   const host = byId("ssh-host").value.trim();
-  const user = byId("ssh-user").value.trim();
   const webUrl = byId("web-url").value.trim();
-  if (transport === "ssh" && (!host || !user)) {
-    showToast("请先在连接设置中填写 SSH 服务器和用户。");
+  if (transport === "ssh" && !host) {
+    showToast("请先填写 SSH 服务器或 ~/.ssh/config 中的 OpenSSH 主机别名。");
     byId("ssh-host").focus();
     return;
   }
