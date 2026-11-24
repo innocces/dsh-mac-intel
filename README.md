@@ -143,14 +143,29 @@ journalctl --user -u dsh-mac-intel.service -f
 
 ### 3. 连接 Mac
 
-打开 DSH Intel，在“连接设置”中选择 **SSH 隧道（推荐）**，填写服务器、用户和 SSH
-端口。服务默认路径为：
+打开 DSH Intel，在“连接设置”中选择 **SSH 隧道（推荐）**。DeepSeek Harness 官方 Web UI
+的标准监听地址是 `http://127.0.0.1:3080`，OpenSSH 默认端口是 `22`；点击 **“填入官方标准配置”**
+可自动填入远端端口 `3080`、本地转发端口 `3080`、SSH 端口 `22` 和辅助脚本路径。
+
+通常只需要补充 **服务器或 OpenSSH 主机别名**。如果 `~/.ssh/config` 已配置用户、密钥和端口，
+用户与身份文件可以留空：
+
+```sshconfig
+Host dsh-server
+  HostName 203.0.113.10
+  User dsh
+  Port 22
+  IdentityFile ~/.ssh/id_ed25519
+```
+
+此时在应用中只需填写主机别名 `dsh-server`。受管服务辅助脚本的默认路径为：
 
 ```text
 ~/.local/share/dsh-mac-intel/bin/dsh-mac-intel-service
 ```
 
-保存后点击“连接服务”。也可以选择 HTTPS 直连；一键更新需要配置 SSH 连接，并在远程服务器上安装
+保存后点击“连接服务”。SSH 模式会把远端 `127.0.0.1:3080` 转发到本机 `127.0.0.1:3080`，无需另外填写
+Web 地址。也可以选择 HTTPS 直连；一键更新需要配置 SSH 连接，并在远程服务器上安装
 `dsh-mac-intel-service` 辅助程序。
 
 > 服务默认只绑定 loopback。不要直接把 `3080`

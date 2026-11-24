@@ -161,14 +161,30 @@ journalctl --user -u dsh-mac-intel.service -f
 
 ### 3. Connect the Mac
 
-Open DSH Intel, select **SSH tunnel (recommended)** under "Connection settings", and enter the
-server, user, and SSH port. The default service path is:
+Open DSH Intel and select **SSH tunnel (recommended)** under "Connection settings". The official
+DeepSeek Harness Web UI listens on `http://127.0.0.1:3080` by default, and OpenSSH uses port `22`.
+Click **"Apply official defaults"** to fill the remote port `3080`, local forward port `3080`, SSH
+port `22`, and managed-service helper path.
+
+Usually, only the **server or OpenSSH host alias** is required. If `~/.ssh/config` already owns the
+user, identity, and port, the user and identity-file fields can stay empty:
+
+```sshconfig
+Host dsh-server
+  HostName 203.0.113.10
+  User dsh
+  Port 22
+  IdentityFile ~/.ssh/id_ed25519
+```
+
+Enter only the alias `dsh-server` in the app. The managed-service helper defaults to:
 
 ```text
 ~/.local/share/dsh-mac-intel/bin/dsh-mac-intel-service
 ```
 
-Save the settings and click "Connect to service". Direct HTTPS connections are also supported.
+Save the settings and click "Connect to service". SSH mode forwards remote `127.0.0.1:3080` to local
+`127.0.0.1:3080`, so no separate Web address is needed. Direct HTTPS connections are also supported.
 One-click updates require an SSH profile with the `dsh-mac-intel-service` helper installed.
 
 > The service binds to the loopback interface by default. Do not expose port `3080` directly to the
