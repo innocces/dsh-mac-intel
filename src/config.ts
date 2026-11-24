@@ -1,4 +1,5 @@
 import type { AppConfig, AppProfile, Shortcut } from "./types.ts";
+import { DSH_WEB_HOST, DSH_WEB_PORT, MANAGED_SERVICE_PATH, SSH_PORT } from "./constants.ts";
 
 const CONFIG_SCHEMA_VERSION = 2 as const;
 
@@ -93,15 +94,15 @@ export function defaultProfile(): AppProfile {
     id: "default",
     name: "SSH 服务",
     transport: "ssh",
-    webUrl: "",
+    webUrl: `http://${DSH_WEB_HOST}:${DSH_WEB_PORT}`,
     ssh: {
       host: "",
       user: "",
-      port: 22,
+      port: SSH_PORT,
       identityFile: "",
-      remotePort: 3080,
-      localPort: 3080,
-      servicePath: "~/.local/share/dsh-mac-intel/bin/dsh-mac-intel-service",
+      remotePort: DSH_WEB_PORT,
+      localPort: DSH_WEB_PORT,
+      servicePath: MANAGED_SERVICE_PATH,
     },
   };
 }
@@ -232,10 +233,10 @@ export function normalizeProfile(value: unknown): AppProfile | null {
   const ssh = {
     host: cleanHost(typeof rawSsh.host === "string" ? rawSsh.host : ""),
     user: cleanUser(typeof rawSsh.user === "string" ? rawSsh.user : ""),
-    port: clampNumber(rawSsh.port, 1, 65535, 22),
+    port: clampNumber(rawSsh.port, 1, 65535, SSH_PORT),
     identityFile: typeof rawSsh.identityFile === "string" ? rawSsh.identityFile.trim() : "",
-    remotePort: clampNumber(rawSsh.remotePort, 1, 65535, 3080),
-    localPort: clampNumber(rawSsh.localPort, 1, 65535, 3080),
+    remotePort: clampNumber(rawSsh.remotePort, 1, 65535, DSH_WEB_PORT),
+    localPort: clampNumber(rawSsh.localPort, 1, 65535, DSH_WEB_PORT),
     servicePath: cleanServicePath(
       typeof rawSsh.servicePath === "string"
         ? rawSsh.servicePath
@@ -264,7 +265,7 @@ function migrateLegacyProfile(profile: AppProfile): AppProfile {
     ...profile,
     name: "SSH 服务",
     transport: "ssh",
-    webUrl: "",
+    webUrl: `http://${DSH_WEB_HOST}:${DSH_WEB_PORT}`,
   };
 }
 
@@ -323,7 +324,7 @@ export function cleanHost(value: string): string {
 /** SSH users may not begin with a dash or contain shell metacharacters. */
 export function cleanUser(value: string): string {
   const normalized = value.trim();
-  if (!/^[a-zA-Z0-9._-]+$/.test(normalized) || normalized.startsWith("-")) return "";
+  if (!/^[a-zA-Z0-9._@+-]+$/.test(normalized) || normalized.startsWith("-")) return "";
   return normalized;
 }
 

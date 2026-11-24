@@ -2,6 +2,7 @@ import {
   cleanHost,
   cleanServicePath,
   cleanUrl,
+  cleanUser,
   defaultConfig,
   normalizeConfig,
   normalizeShortcut,
@@ -29,13 +30,15 @@ Deno.test("default config keeps the built-in plugin shortcuts", () => {
   );
   assertEquals(config.schemaVersion, 2);
   assertEquals(config.profiles[0].transport, "ssh");
-  assertEquals(config.profiles[0].webUrl, "");
+  assertEquals(config.profiles[0].webUrl, "http://127.0.0.1:3080");
 });
 
 Deno.test("normalization rejects unsafe hosts, URLs, and service paths", () => {
   assertEquals(cleanHost("example.com"), "example.com");
   assertEquals(cleanHost("-oProxyCommand=evil"), "");
   assertEquals(cleanHost("host;rm -rf /"), "");
+  assertEquals(cleanUser("wangxiaotian@biosan.cn"), "wangxiaotian@biosan.cn");
+  assertEquals(cleanUser("-oProxyCommand=evil"), "");
   assertEquals(cleanUrl("javascript:alert(1)"), "");
   assertEquals(cleanUrl("https://user:secret@example.com"), "");
   assertEquals(
@@ -76,7 +79,7 @@ Deno.test("legacy loopback placeholder migrates to the SSH workflow", () => {
   });
   assertEquals(config.schemaVersion, 2);
   assertEquals(config.profiles[0].transport, "ssh");
-  assertEquals(config.profiles[0].webUrl, "");
+  assertEquals(config.profiles[0].webUrl, "http://127.0.0.1:3080");
 });
 
 Deno.test("shortcut normalization requires a label and a URL for URL shortcuts", () => {

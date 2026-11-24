@@ -11,7 +11,7 @@ Deno.test("managed updates require a configured SSH profile", async () => {
   const result = await client.update("update-plugin");
   assert(!result.success, "an empty SSH profile must not start an update");
   assert(
-    result.message.includes("SSH 服务器和用户"),
+    result.message.includes("SSH 服务器或 OpenSSH 主机别名"),
     "the missing SSH configuration should be explained",
   );
   await assertRejects(

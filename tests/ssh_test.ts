@@ -1,8 +1,14 @@
-import { buildSshCommandArgs, parseServiceStatus } from "../src/ssh.ts";
+import { buildSshCommandArgs, buildSshTarget, parseServiceStatus } from "../src/ssh.ts";
 import type { AppProfile } from "../src/types.ts";
 
 function assert(condition: boolean, message: string): void {
   if (!condition) throw new Error(message);
+}
+
+function assertEquals<T>(actual: T, expected: T): void {
+  if (actual !== expected) {
+    throw new Error(`Expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
+  }
 }
 
 Deno.test("service status parser accepts JSON after diagnostic output", () => {
@@ -16,6 +22,28 @@ Deno.test("service status parser accepts JSON after diagnostic output", () => {
 
 Deno.test("service status parser rejects non-JSON output", () => {
   assert(parseServiceStatus("service unavailable") === null, "invalid output should not parse");
+});
+
+Deno.test("SSH host aliases can own their user and port configuration", () => {
+  const profile: AppProfile = {
+    id: "alias",
+    name: "Alias",
+    transport: "ssh",
+    webUrl: "",
+    ssh: {
+      host: "dsh-server",
+      user: "",
+      port: 22,
+      identityFile: "",
+      remotePort: 3080,
+      localPort: 3080,
+      servicePath: "~/.local/share/dsh-mac-intel/bin/dsh-mac-intel-service",
+    },
+  };
+  assertEquals(buildSshTarget(profile), "dsh-server");
+  const args = buildSshCommandArgs(profile);
+  assert(args.includes("dsh-server"), "the OpenSSH alias should be used as the destination");
+  assert(!args.includes("-p"), "the default port should be left to ~/.ssh/config");
 });
 
 Deno.test("SSH service command places the destination before the remote command", () => {

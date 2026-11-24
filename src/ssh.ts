@@ -1,5 +1,6 @@
 import type { AppProfile, ServiceStatus } from "./types.ts";
 import { Logger } from "./logger.ts";
+import { SSH_PORT } from "./constants.ts";
 
 /** Managed-service operations accepted by the remote helper script. */
 export type ServiceOperation = "status" | "update-plugin" | "update-harness" | "update-all";
@@ -44,9 +45,10 @@ export class SshClient {
       "ServerAliveCountMax=3",
       "-L",
       `127.0.0.1:${localPort}:127.0.0.1:${this.#profile.ssh.remotePort}`,
-      this.#target(),
+      buildSshTarget(this.#profile),
     ];
-    this.#logger.info(`Starting SSH tunnel to ${this.#target()}:${this.#profile.ssh.remotePort}`);
+    const target = buildSshTarget(this.#profile);
+    this.#logger.info(`Starting SSH tunnel to ${target}:${this.#profile.ssh.remotePort}`);
     const process = new Deno.Command("ssh", {
       args,
       stdin: "null",
@@ -79,10 +81,6 @@ export class SshClient {
     }
   }
 
-  #target(): string {
-    return `${this.#profile.ssh.user}@${this.#profile.ssh.host}`;
-  }
-
   async #consumeStderr(process: Deno.ChildProcess): Promise<void> {
     if (process.stderr === null) return;
     const decoder = new TextDecoder();
@@ -104,23 +102,36 @@ export function buildSshCommandArgs(
 ): string[] {
   return [
     ...buildSshBaseArgs(profile),
-    `${profile.ssh.user}@${profile.ssh.host}`,
+    buildSshTarget(profile),
     ...remoteCommand,
   ];
 }
 
+/**
+ * Build an OpenSSH destination.
+ *
+ * An explicit user is optional so an existing `Host` alias can own its user,
+ * identity file, port, and known-host configuration in `~/.ssh/config`.
+ */
+export function buildSshTarget(profile: AppProfile): string {
+  const user = profile.ssh.user.trim();
+  return user ? `${user}@${profile.ssh.host}` : profile.ssh.host;
+}
+
 /** Build the shared OpenSSH options for tunnels and managed-service commands. */
 function buildSshBaseArgs(profile: AppProfile): string[] {
-  const args = [
-    "-p",
-    String(profile.ssh.port),
+  const args: string[] = [];
+  if (profile.ssh.port !== SSH_PORT) {
+    args.push("-p", String(profile.ssh.port));
+  }
+  args.push(
     "-o",
     "BatchMode=yes",
     "-o",
     "ConnectTimeout=10",
     "-o",
     "StrictHostKeyChecking=accept-new",
-  ];
+  );
   if (profile.ssh.identityFile) {
     args.push("-i", expandHomePath(profile.ssh.identityFile));
   }

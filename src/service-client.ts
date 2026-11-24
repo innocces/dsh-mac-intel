@@ -24,8 +24,8 @@ export class ServiceClient {
   /** Read the current service, DSH, and plugin versions. */
   async status(): Promise<ServiceStatus> {
     if (this.#profile.transport === "ssh") {
-      if (!this.#profile.ssh.host || !this.#profile.ssh.user) {
-        throw new Error("请先在连接设置中填写 SSH 服务器和用户。");
+      if (!this.#profile.ssh.host) {
+        throw new Error("请先在连接设置中填写 SSH 服务器或 OpenSSH 主机别名。");
       }
       const result = await new SshClient(this.#profile, this.#logger).service("status");
       if (!result.success || result.status === null) {
@@ -74,10 +74,10 @@ export class ServiceClient {
         status: null,
       };
     }
-    if (!this.#profile.ssh.host || !this.#profile.ssh.user) {
+    if (!this.#profile.ssh.host) {
       return {
         success: false,
-        message: "请先在连接设置中填写 SSH 服务器和用户。",
+        message: "请先在连接设置中填写 SSH 服务器或 OpenSSH 主机别名。",
         status: null,
       };
     }

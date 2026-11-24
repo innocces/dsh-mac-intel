@@ -1,6 +1,7 @@
 import type { AppProfile } from "./types.ts";
 import { Logger } from "./logger.ts";
 import { SshClient } from "./ssh.ts";
+import { DSH_WEB_HOST } from "./constants.ts";
 
 /** A live connection to the official DSH web application. */
 export class DshConnection {
@@ -26,7 +27,7 @@ export class DshConnection {
     const localPort = await findAvailablePort(this.#profile.ssh.localPort);
     const client = new SshClient(this.#profile, this.#logger);
     this.#tunnel = await client.startTunnel(localPort);
-    this.#url = `http://127.0.0.1:${localPort}`;
+    this.#url = `http://${DSH_WEB_HOST}:${localPort}`;
     const ready = await waitForHttp(this.#url, 12_000);
     if (!ready) {
       await this.stop();

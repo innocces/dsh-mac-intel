@@ -280,7 +280,7 @@ export class AppController implements ControlHost {
     if (profile.transport === "https") {
       return profile.webUrl.startsWith("http://") || profile.webUrl.startsWith("https://");
     }
-    return profile.ssh.host.length > 0 && profile.ssh.user.length > 0;
+    return profile.ssh.host.length > 0;
   }
 
   async #refreshServiceStatus(): Promise<void> {
