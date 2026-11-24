@@ -85,6 +85,8 @@
 - **原生快捷菜单**：插件管理、Our Free
   Model、插件升级、插件市场、MCP、技能、定时任务、终端和设置等入口同时进入 macOS 菜单与控制中心。
 - **自定义控制界面**：可增加官方面板、界面文字或任意 `http(s)` URL 快捷方式。
+- **单窗口工作区**：控制中心与 DeepSeek Harness 在同一个应用窗口内切换，不再额外打开浏览器窗口；
+  可通过原生菜单“显示控制中心”随时返回。
 - **环境检测**：区分必需项与可选项；Mac 端没有 Node.js 也不会阻断使用。
 - **无 Node 桌面端**：发布包内含 Deno 运行时；只有远程 Linux 服务需要 Node.js。
 
@@ -119,9 +121,14 @@ mv DSH-Intel.app /Applications/
 4. 仅在 `127.0.0.1:3080` 启动 DSH Web；
 5. 自动把连接方式切换为 HTTP 直连，并填入 `http://127.0.0.1:3080`。
 
-首次安装需要访问 `nodejs.org` 和 npm registry，耗时取决于网络；完整运行时约占 `1.6 GB`。 文件保存在
+首次安装需要访问 `nodejs.org` 和 npm registry，耗时取决于网络；完整运行时约占 `1.6 GB`，安装前
+还会检查目标磁盘至少有 `2 GiB` 可用空间。文件保存在
 `~/Library/Application Support/DSH Intel/local-service`，LaunchAgent 日志位于同目录的
 `service.log`。不再需要时可以在同一界面点击“停止本机服务”；停止不会删除已安装文件。
+
+为避免浏览器或插件自动更新失败后不断堆积临时文件，本机服务使用独立的 `tmp` 目录，不会写入 macOS
+全局临时目录。清理 LaunchAgent 每 5 分钟运行一次：删除超过 24 小时的失败更新残留，并把该目录限制在
+`1 GiB` 内；正在写入的文件会保留 10 分钟保护期。清理日志位于同目录的 `cleanup.log`。
 
 > 本机服务只监听 loopback，不会直接暴露到局域网或公网。当前受管组件的一键更新仍要求 SSH
 > 配置；本机模式的安装与运行不依赖远程服务器。
@@ -233,8 +240,9 @@ deno task prepare:plugin
 deno task package:service
 ```
 
-GitHub Actions 会在 `main` 分支执行检查，在 `v*` 标签上构建、生成更新补丁并发布 GitHub Release。详见
-[`.github/workflows`](.github/workflows)。
+GitHub Actions 会在 `main` 分支执行检查。每次代码推送到 `main` 后，Release workflow 会自动递增
+补丁版本、创建对应的 `v*` 标签，并构建、生成更新补丁和发布 GitHub Release；手动推送 `v*` 标签或
+手动触发 workflow 也会发布对应版本。详见 [`.github/workflows`](.github/workflows)。
 
 ## 项目结构
 

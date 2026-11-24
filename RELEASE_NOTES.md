@@ -5,6 +5,8 @@
 - Our Free Model bundled as the default plugin with a SHA-512-verified npm tarball.
 - Separate update and rollback paths for Our Free Model, DeepSeek Harness, and the desktop shell.
 - Native macOS shortcut menu and a local custom control center.
+- One application window switches between the control center and the official Harness web UI.
+- Main-branch pushes automatically publish the next patch release with verified assets.
 
 ### Installation notes
 

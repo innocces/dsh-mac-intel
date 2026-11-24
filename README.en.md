@@ -98,6 +98,9 @@ release, and some native DSH dependencies cannot run directly on Intel Macs. Thi
   the macOS menu and the control center.
 - **A custom control interface**: users can add official panels, custom interface text, or shortcuts
   to any `http(s)` URL.
+- **A single-window workspace**: the control center and DeepSeek Harness switch inside the same
+  application window, without opening a separate browser window. The native “Show Control Center”
+  menu item returns to the control center at any time.
 - **Environment detection**: required and optional dependencies are distinguished. The lack of
   Node.js on the Mac does not prevent use of the desktop client.
 - **No Node.js on the desktop**: release packages include the Deno runtime; only the remote Linux
@@ -138,10 +141,17 @@ automatically:
 5. Switches the connection mode to direct HTTP and fills `http://127.0.0.1:3080`.
 
 The first installation needs access to `nodejs.org` and the npm registry and takes roughly `1.6 GB`
-of disk space. Runtime files are stored under
+of disk space. Before installing, DSH Intel also verifies that the target volume has at least
+`2 GiB` available. Runtime files are stored under
 `~/Library/Application Support/DSH Intel/local-service`, with the LaunchAgent log at `service.log`
 in the same directory. Use **"Stop local service"** when it is no longer needed; stopping does not
 delete the installed files.
+
+To keep failed browser or plugin updates from filling the disk, the local service uses its own `tmp`
+directory instead of the macOS global temporary directory. A cleanup LaunchAgent runs every five
+minutes, removes failed-update residue older than 24 hours, and enforces a `1 GiB` quota for that
+directory. Files that are actively being written receive a ten-minute grace period. Cleanup
+diagnostics are written to `cleanup.log` in the same directory.
 
 > The local service listens on loopback only and is never exposed directly to the LAN or public
 > internet. One-click managed-component updates still require an SSH profile; installing and running
@@ -258,8 +268,10 @@ deno task prepare:plugin
 deno task package:service
 ```
 
-GitHub Actions runs checks on the `main` branch and builds, generates update patches, and publishes
-a GitHub release for `v*` tags. See [`.github/workflows`](.github/workflows) for details.
+GitHub Actions runs checks on the `main` branch. After each push to `main`, the release workflow
+automatically increments the patch version, creates the matching `v*` tag, and builds, generates
+update patches, and publishes a GitHub release. Manually pushed `v*` tags and manual workflow runs
+publish the corresponding version as well. See [`.github/workflows`](.github/workflows) for details.
 
 ## Project structure
 
